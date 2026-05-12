@@ -1,0 +1,155 @@
+<script>
+  import { createEventDispatcher } from 'svelte';
+
+  const dispatch = createEventDispatcher();
+
+  let mode = 'join';
+  let roomId = '';
+  let name = '';
+  let pin = '';
+  let roomType = 'planning-poker';
+
+  function handleCreate() {
+    if (!name.trim()) return;
+    dispatch('create', { name: name.trim(), roomType, pin: pin.trim() || undefined });
+  }
+
+  function handleJoin() {
+    if (!name.trim() || !roomId.trim()) return;
+    dispatch('join', { roomId: roomId.trim(), name: name.trim(), pin: pin.trim() || undefined });
+  }
+</script>
+
+<div class="join-form">
+  <h1>Simple Estimation</h1>
+
+  <div class="tabs">
+    <button class:active={mode === 'join'} on:click={() => mode = 'join'}>Join Room</button>
+    <button class:active={mode === 'create'} on:click={() => mode = 'create'}>Create Room</button>
+  </div>
+
+  <div class="fields">
+    <label>
+      Your name
+      <input type="text" bind:value={name} placeholder="Enter your name" />
+    </label>
+
+    {#if mode === 'join'}
+      <label>
+        Room ID
+        <input type="text" bind:value={roomId} placeholder="Paste room ID" />
+      </label>
+      <label>
+        Facilitator PIN (optional)
+        <input type="text" bind:value={pin} placeholder="Enter PIN if you have one" />
+      </label>
+      <button class="primary" on:click={handleJoin} disabled={!name.trim() || !roomId.trim()}>
+        Join
+      </button>
+    {:else}
+      <label>
+        Room type
+        <select bind:value={roomType}>
+          <option value="planning-poker">Planning Poker</option>
+          <option value="bucket">Bucket Estimation</option>
+          <option value="relative">Relative Estimation</option>
+        </select>
+      </label>
+      <label>
+        Facilitator PIN (optional)
+        <input type="text" bind:value={pin} placeholder="Set a PIN to protect facilitator role" />
+      </label>
+      <button class="primary" on:click={handleCreate} disabled={!name.trim()}>
+        Create Room
+      </button>
+    {/if}
+  </div>
+</div>
+
+<style>
+  .join-form {
+    max-width: 420px;
+    margin: 80px auto;
+    padding: 32px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  h1 {
+    margin: 0 0 24px;
+    font-size: 1.6rem;
+    text-align: center;
+  }
+
+  .tabs {
+    display: flex;
+    margin-bottom: 24px;
+    border-bottom: 2px solid #eee;
+  }
+
+  .tabs button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #666;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+  }
+
+  .tabs button.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+    font-weight: 600;
+  }
+
+  .fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.9rem;
+    color: #444;
+    font-weight: 500;
+  }
+
+  input, select {
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+
+  input:focus, select:focus {
+    outline: 2px solid #2563eb;
+    border-color: transparent;
+  }
+
+  button.primary {
+    padding: 10px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  button.primary:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+
+  button.primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+</style>
