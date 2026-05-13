@@ -31,6 +31,13 @@ const createRoomLimiter = rateLimit({
   message: { error: 'Too many rooms created, please try again later' },
 });
 
+const staticFallbackLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use('/api', apiLimiter);
 
 app.post('/api/rooms', createRoomLimiter, async (req, res) => {
@@ -83,7 +90,7 @@ app.delete('/api/rooms/:id', async (req, res) => {
   res.status(204).end();
 });
 
-app.get('*', (req, res) => {
+app.get('*', staticFallbackLimiter, (req, res) => {
   res.sendFile(path.resolve(STATIC_DIR, 'index.html'));
 });
 
