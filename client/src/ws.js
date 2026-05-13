@@ -47,7 +47,7 @@ function openConnection() {
     try {
       const msg = JSON.parse(event.data);
       if (msg.type === 'state') {
-        roomState.set(msg);
+        roomState.set(msg.room);
       } else if (msg.type === 'error') {
         wsError.set(msg.message);
       }

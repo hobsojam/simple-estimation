@@ -1,5 +1,6 @@
 <script>
   import { roomState, send, wsError, myId } from '../ws.js';
+  import Card from './Card.svelte';
 
   const CARDS = ['1', '2', '3', '5', '8', '13', '21', '?', '∞', '☕'];
 
@@ -119,14 +120,12 @@
           <h3>Your vote</h3>
           <div class="cards">
             {#each CARDS as card}
-              <button
-                class="card"
-                class:selected={selectedCard === card}
-                on:click={() => castVote(card)}
+              <Card
+                value={card}
+                selected={selectedCard === card}
                 disabled={state.revealed}
-              >
-                {card}
-              </button>
+                on:select={() => castVote(card)}
+              />
             {/each}
           </div>
         </div>
@@ -335,34 +334,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-  }
-
-  .card {
-    width: 54px;
-    height: 72px;
-    font-size: 1.2rem;
-    font-weight: 600;
-    border: 2px solid #d1d5db;
-    border-radius: 6px;
-    background: #fff;
-    cursor: pointer;
-    transition: border-color 0.1s, background 0.1s;
-  }
-
-  .card:hover:not(:disabled) {
-    border-color: #2563eb;
-    background: #eff6ff;
-  }
-
-  .card.selected {
-    border-color: #2563eb;
-    background: #2563eb;
-    color: #fff;
-  }
-
-  .card:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 
   .facilitator-controls {
