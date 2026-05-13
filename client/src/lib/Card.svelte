@@ -12,7 +12,7 @@
   class="card"
   class:selected
   {disabled}
-  on:click={() => dispatch('select', value)}
+  on:click={() => { if (!disabled) dispatch('select', value); }}
 >
   {value}
 </button>
