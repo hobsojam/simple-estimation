@@ -20,6 +20,10 @@ function getRoom(roomId) {
   return rooms.get(roomId);
 }
 
+function getAllRooms() {
+  return Array.from(rooms.values());
+}
+
 function addParticipant(roomId, participant) {
   const room = rooms.get(roomId);
   if (!room) return;
@@ -80,6 +84,10 @@ function resetRound(roomId) {
   }
 }
 
+function deleteRoom(roomId) {
+  rooms.delete(roomId);
+}
+
 function clearRooms() {
   rooms.clear();
 }
@@ -87,6 +95,7 @@ function clearRooms() {
 module.exports = {
   createRoom,
   getRoom,
+  getAllRooms,
   addParticipant,
   removeParticipant,
   setFacilitator,
@@ -95,5 +104,6 @@ module.exports = {
   addItem,
   revealVotes,
   resetRound,
+  deleteRoom,
   clearRooms,
 };

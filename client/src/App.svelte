@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { roomState, wsError, connect, disconnect, send } from './ws.js';
   import JoinForm from './lib/JoinForm.svelte';
+  import RoomList from './lib/RoomList.svelte';
   import PlanningPoker from './lib/PlanningPoker.svelte';
   import BucketEstimation from './lib/BucketEstimation.svelte';
   import RelativeEstimation from './lib/RelativeEstimation.svelte';
@@ -79,6 +80,14 @@
     page = 'joining';
   }
 
+  function handleJoinById(roomId) {
+    setUrlParams(roomId, null);
+    joinSent = false;
+    connect(roomId);
+    pendingJoin = null;
+    page = 'joining';
+  }
+
   function handleLeave() {
     disconnect();
     clearUrlParams();
@@ -121,6 +130,7 @@
     {#if createError}
       <div class="create-error">{createError}</div>
     {/if}
+    <RoomList on:join={(e) => handleJoinById(e.detail.roomId)} />
 
   {:else if page === 'joining'}
     <div class="loading">Connecting…</div>
