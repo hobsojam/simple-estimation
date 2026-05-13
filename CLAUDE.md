@@ -139,6 +139,20 @@ Static files are served from `./public` in production. The `STATIC_DIR` env var 
 - All inbound WebSocket messages must be validated before acting on them (check required fields, check facilitator permissions)
 - Facilitator-only actions (`reveal`, `reset`, `add_item`) must verify `ws.participantId === room.facilitatorId` server-side — never trust the client
 
+## Dependency changes
+
+When adding or removing npm packages, do all installs and uninstalls in one pass, then verify the lock file is clean before committing:
+
+```bash
+# Good — single pass
+npm install pkg-a pkg-b && npm uninstall pkg-c
+
+# If you've made multiple separate npm calls, regenerate the lock file:
+rm package-lock.json && npm install
+```
+
+CI uses `npm ci`, which fails if `package.json` and `package-lock.json` are out of sync. Always commit both files together.
+
 ## Git Workflow
 
 - Feature work on `feat/<short-description>` branches, PRs targeting `main`
