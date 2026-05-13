@@ -59,6 +59,12 @@ function moveItem(roomId, itemId, position) {
   }
 }
 
+function addItem(roomId, item) {
+  const room = rooms.get(roomId);
+  if (!room) return;
+  room.items.push(item);
+}
+
 function revealVotes(roomId) {
   const room = rooms.get(roomId);
   if (!room) return;
@@ -82,6 +88,7 @@ module.exports = {
   setFacilitator,
   castVote,
   moveItem,
+  addItem,
   revealVotes,
   resetRound,
 };

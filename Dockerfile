@@ -1,16 +1,14 @@
 FROM node:20-alpine AS builder
-WORKDIR /app
-COPY client/ ./client/
 WORKDIR /app/client
+COPY client/ .
 RUN npm ci && npm run build
 
 FROM node:20-alpine AS runner
+USER node
 WORKDIR /app
-COPY server/ ./server/
-WORKDIR /app/server
+COPY server/package*.json ./
 RUN npm ci --omit=dev
+COPY server/ ./
 COPY --from=builder /app/client/dist ./public
-ENV STATIC_DIR=./public
-ENV PORT=3000
 EXPOSE 3000
 CMD ["node", "index.js"]

@@ -22,7 +22,7 @@ app.post('/api/rooms', async (req, res) => {
   }
   const pinHash = pin ? await bcrypt.hash(String(pin), 10) : null;
   const room = createRoom(type, pinHash);
-  res.json({ roomId: room.id });
+  res.json({ id: room.id });
 });
 
 app.get('*', (req, res) => {
@@ -41,7 +41,7 @@ function sanitizeRoom(room) {
     participants: room.participants.map(p => ({
       id: p.id,
       name: p.name,
-      vote: room.revealed ? p.vote : (p.vote !== null ? '?' : null),
+      vote: room.revealed ? p.vote : null,
     })),
     items: room.items,
   };
@@ -61,19 +61,20 @@ const roomSockets = new Map();
 wss.on('connection', (ws, req) => {
   const url = new URL(req.url, `http://localhost`);
   const roomId = url.searchParams.get('roomId');
+  const participantId = url.searchParams.get('participantId');
 
   if (!roomId) {
     ws.close(1008, 'roomId required');
     return;
   }
 
-  let room = getRoom(roomId);
+  const room = getRoom(roomId);
   if (!room) {
     ws.close(1008, 'Room not found');
     return;
   }
 
-  ws.participantId = uuidv4();
+  ws.participantId = participantId || uuidv4();
   ws.roomId = roomId;
 
   if (!roomSockets.has(roomId)) {
@@ -90,17 +91,17 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
-    room = getRoom(roomId);
-    if (!room) {
+    const currentRoom = getRoom(roomId);
+    if (!currentRoom) {
       ws.close(1008, 'Room not found');
       return;
     }
 
-    await handleMessage(ws, room, data);
+    await handleMessage(ws, currentRoom, data);
 
-    room = getRoom(roomId);
+    const updatedRoom = getRoom(roomId);
     const sockets = roomSockets.get(roomId) || new Set();
-    broadcastState(room, sockets);
+    broadcastState(updatedRoom, sockets);
   });
 
   ws.on('close', () => {
@@ -111,13 +112,13 @@ wss.on('connection', (ws, req) => {
         roomSockets.delete(roomId);
       }
     }
-    room = getRoom(roomId);
-    if (room) {
+    const currentRoom = getRoom(roomId);
+    if (currentRoom) {
       removeParticipant(roomId, ws.participantId);
-      room = getRoom(roomId);
+      const updatedRoom = getRoom(roomId);
       const remaining = roomSockets.get(roomId);
       if (remaining && remaining.size > 0) {
-        broadcastState(room, remaining);
+        broadcastState(updatedRoom, remaining);
       }
     }
   });
