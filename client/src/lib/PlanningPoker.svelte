@@ -112,7 +112,7 @@
         {:else}
           <div class="waiting">
             <p>Waiting for votes…</p>
-            <p class="hint">{state.participants.filter(p => p.vote !== null).length} of {state.participants.length} voted</p>
+            <p class="hint" aria-live="polite" aria-atomic="true">{state.participants.filter(p => p.vote !== null).length} of {state.participants.length} voted</p>
           </div>
         {/if}
 
@@ -165,7 +165,7 @@
 
   .room-id {
     font-size: 0.85rem;
-    color: #888;
+    color: #767676;
     font-family: monospace;
   }
 
@@ -235,7 +235,7 @@
 
   .vote-indicator {
     font-size: 0.85rem;
-    color: #6b7280;
+    color: #4b5563;
     min-width: 20px;
     text-align: right;
   }

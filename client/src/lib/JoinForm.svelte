@@ -1,4 +1,6 @@
 <script>
+  import { tick } from 'svelte';
+
   let { oncreate, onjoin } = $props();
 
   let mode = $state('join');
@@ -6,6 +8,9 @@
   let name = $state('');
   let pin = $state('');
   let roomType = $state('planning-poker');
+
+  let tabJoin = $state(null);
+  let tabCreate = $state(null);
 
   function handleCreate() {
     if (!name.trim()) return;
@@ -16,22 +21,60 @@
     if (!name.trim() || !roomId.trim()) return;
     onjoin?.({ roomId: roomId.trim(), name: name.trim(), pin: pin.trim() || undefined });
   }
+
+  async function switchTab(next) {
+    mode = next;
+    await tick();
+    (next === 'join' ? tabJoin : tabCreate)?.focus();
+  }
+
+  function onTabKeydown(e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      switchTab(mode === 'join' ? 'create' : 'join');
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      switchTab(mode === 'join' ? 'create' : 'join');
+    }
+  }
 </script>
 
 <div class="join-form">
   <h1>Simple Estimation</h1>
 
-  <div class="tabs">
-    {#if mode === 'join'}
-      <span class="tab active">Join Room</span>
-      <button class="tab" onclick={() => mode = 'create'}>Create Room</button>
-    {:else}
-      <button class="tab" onclick={() => mode = 'join'}>Join Room</button>
-      <span class="tab active">Create Room</span>
-    {/if}
+  <div class="tabs" role="tablist">
+    <button
+      bind:this={tabJoin}
+      class="tab"
+      class:active={mode === 'join'}
+      role="tab"
+      aria-selected={mode === 'join'}
+      aria-controls="join-panel"
+      id="tab-join"
+      tabindex={mode === 'join' ? 0 : -1}
+      onclick={() => switchTab('join')}
+      onkeydown={onTabKeydown}
+    >Join Room</button>
+    <button
+      bind:this={tabCreate}
+      class="tab"
+      class:active={mode === 'create'}
+      role="tab"
+      aria-selected={mode === 'create'}
+      aria-controls="create-panel"
+      id="tab-create"
+      tabindex={mode === 'create' ? 0 : -1}
+      onclick={() => switchTab('create')}
+      onkeydown={onTabKeydown}
+    >Create Room</button>
   </div>
 
-  <div class="fields">
+  <div
+    class="fields"
+    role="tabpanel"
+    id="{mode}-panel"
+    aria-labelledby="tab-{mode}"
+  >
     <label>
       Your name
       <input type="text" bind:value={name} placeholder="Enter your name" />

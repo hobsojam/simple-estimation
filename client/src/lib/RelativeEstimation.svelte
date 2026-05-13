@@ -2,9 +2,11 @@
   import { roomState, send, wsError, myId } from '../ws.js';
 
   const FIBONACCI = [1, 2, 3, 5, 8, 13, 21];
+  const ALL_POSITIONS = [null, ...FIBONACCI.map(String)];
 
   let newItemLabel = '';
   let dragItemId = null;
+  let moveAnnouncement = '';
 
   $: state = $roomState;
   $: isFacilitator = state && $myId && state.facilitatorId === $myId;
@@ -40,10 +42,23 @@
   function onDragEnd() {
     dragItemId = null;
   }
+
+  function onItemKeydown(event, item) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    const currentIdx = ALL_POSITIONS.indexOf(item.position);
+    const dir = event.shiftKey ? -1 : 1;
+    const nextIdx = (currentIdx + dir + ALL_POSITIONS.length) % ALL_POSITIONS.length;
+    const next = ALL_POSITIONS[nextIdx];
+    send({ type: 'move_item', itemId: item.id, position: next });
+    moveAnnouncement = `${item.label} moved to ${next ?? 'Unplaced'}`;
+  }
 </script>
 
 {#if state}
   <div class="relative-room">
+  <div class="sr-only" aria-live="polite" aria-atomic="true">{moveAnnouncement}</div>
+  <p id="relative-kb-hint" class="sr-only">Press Enter or Space to move to the next column. Hold Shift to move backwards.</p>
     <div class="header">
       <h2>Relative Estimation</h2>
       <span class="room-id">Room: {state.id}</span>
@@ -80,8 +95,10 @@
             role="button"
             tabindex="0"
             draggable="true"
+            aria-describedby="relative-kb-hint"
             on:dragstart={(e) => onDragStart(e, item.id)}
             on:dragend={onDragEnd}
+            on:keydown={(e) => onItemKeydown(e, item)}
           >
             {item.label}
           </div>
@@ -126,6 +143,18 @@
 {/if}
 
 <style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
   .relative-room {
     padding: 24px;
     max-width: 1200px;
@@ -145,7 +174,7 @@
 
   .room-id {
     font-size: 0.85rem;
-    color: #888;
+    color: #767676;
     font-family: monospace;
   }
 
@@ -217,13 +246,13 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #6b7280;
+    color: #4b5563;
     margin-bottom: 4px;
   }
 
   .empty-hint {
     font-size: 0.8rem;
-    color: #9ca3af;
+    color: #767676;
     text-align: center;
     padding: 12px 0;
   }
@@ -235,7 +264,7 @@
 
   .scale-label {
     font-size: 0.8rem;
-    color: #9ca3af;
+    color: #767676;
     margin-bottom: 10px;
   }
 

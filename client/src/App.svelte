@@ -120,20 +120,28 @@
   }
 
   $: roomType = $roomState?.type;
+
+  $: pageTitle = page === 'room' && $roomState
+    ? `Room · Simple Estimation`
+    : 'Simple Estimation';
 </script>
+
+<svelte:head>
+  <title>{pageTitle}</title>
+</svelte:head>
 
 <div class="app">
   {#if page === 'home'}
     <JoinForm oncreate={handleCreate} onjoin={handleJoin} />
     {#if createError}
-      <div class="create-error">{createError}</div>
+      <div class="create-error" role="alert">{createError}</div>
     {/if}
     <RoomList on:join={(e) => handleJoinById(e.detail.roomId)} />
 
   {:else if page === 'joining'}
     <div class="loading">Connecting…</div>
     {#if $wsError}
-      <div class="error-center">{$wsError}</div>
+      <div class="error-center" role="alert">{$wsError}</div>
     {/if}
 
   {:else if page === 'room-enter-name'}
@@ -155,7 +163,7 @@
       <nav class="top-bar">
         <button class="leave-btn" on:click={handleLeave}>Leave Room</button>
         {#if $wsError}
-          <span class="ws-error">{$wsError}</span>
+          <span class="ws-error" role="alert">{$wsError}</span>
         {/if}
       </nav>
 
