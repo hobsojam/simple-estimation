@@ -5,7 +5,7 @@ const { WebSocketServer } = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
-const { createRoom, getRoom, removeParticipant } = require('./rooms');
+const { createRoom, getRoom, getAllRooms, removeParticipant, deleteRoom } = require('./rooms');
 const { handleMessage } = require('./handlers');
 const { sanitizeRoom } = require('./sanitize');
 
@@ -42,6 +42,45 @@ app.post('/api/rooms', createRoomLimiter, async (req, res) => {
   const pinHash = pin ? await bcrypt.hash(String(pin), 10) : null;
   const room = createRoom(type, pinHash);
   res.json({ id: room.id });
+});
+
+app.get('/api/rooms', (req, res) => {
+  const rooms = getAllRooms();
+  res.json(rooms.map(room => ({
+    id: room.id,
+    type: room.type,
+    participantCount: room.participants.length,
+    pinProtected: room.pinHash !== null,
+  })));
+});
+
+app.delete('/api/rooms/:id', async (req, res) => {
+  const room = getRoom(req.params.id);
+  if (!room) {
+    return res.status(404).json({ error: 'Room not found' });
+  }
+
+  if (room.pinHash !== null) {
+    const { pin } = req.body;
+    if (!pin) {
+      return res.status(403).json({ error: 'PIN required' });
+    }
+    const match = await bcrypt.compare(String(pin), room.pinHash);
+    if (!match) {
+      return res.status(403).json({ error: 'Incorrect PIN' });
+    }
+  }
+
+  const sockets = roomSockets.get(room.id);
+  if (sockets) {
+    for (const ws of sockets) {
+      ws.close(1000, 'Room deleted');
+    }
+    roomSockets.delete(room.id);
+  }
+
+  deleteRoom(room.id);
+  res.status(204).end();
 });
 
 app.get('*', (req, res) => {
