@@ -82,6 +82,8 @@ wss.on('connection', (ws, req) => {
   }
   roomSockets.get(roomId).add(ws);
 
+  ws.send(JSON.stringify({ type: 'state', room: sanitizeRoom(room) }));
+
   ws.on('message', async (raw) => {
     let data;
     try {
