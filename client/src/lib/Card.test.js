@@ -28,19 +28,17 @@ describe('Card', () => {
     expect(getByRole('button')).toBeEnabled();
   });
 
-  it('dispatches select event with value on click', async () => {
-    const { getByRole, component } = render(Card, { value: '13' });
+  it('calls onselect with value on click', async () => {
     const handler = vi.fn();
-    component.$on('select', handler);
+    const { getByRole } = render(Card, { value: '13', onselect: handler });
     await fireEvent.click(getByRole('button'));
     expect(handler).toHaveBeenCalledOnce();
-    expect(handler.mock.calls[0][0].detail).toBe('13');
+    expect(handler.mock.calls[0][0]).toBe('13');
   });
 
-  it('does not dispatch select when disabled', async () => {
-    const { getByRole, component } = render(Card, { value: '5', disabled: true });
+  it('does not call onselect when disabled', async () => {
     const handler = vi.fn();
-    component.$on('select', handler);
+    const { getByRole } = render(Card, { value: '5', disabled: true, onselect: handler });
     await fireEvent.click(getByRole('button'));
     expect(handler).not.toHaveBeenCalled();
   });
