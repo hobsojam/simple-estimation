@@ -153,7 +153,9 @@ rm package-lock.json && npm install
 
 Always commit both `package.json` and `package-lock.json` together.
 
-The client CI steps use `npm install` rather than `npm ci`. The lock file is generated on Windows (or macOS) and so does not contain Linux-specific optional packages (`@rolldown/binding-linux-x64-gnu` etc.) that `npm ci` on Linux requires to be pre-recorded. `npm install` uses the lock file for exact versions of everything it can, and resolves platform-specific optional packages for the current environment.
+The client CI steps use `npm install` rather than `npm ci`. The lock file is generated on Windows (or macOS) and so does not contain Linux-specific optional packages (`@rolldown/binding-linux-x64-gnu` etc.) that `npm ci` on Linux requires to be pre-recorded. `npm install` uses the lock file for exact versions of everything it can, and resolves platform-specific optional packages for the current environment. The lock file is still worth committing — it pins the vast majority of packages to known-good versions.
+
+If this becomes a persistent problem (more deps with platform-specific optional binaries), the fix is to switch the client to **pnpm**, which handles cross-platform lock files correctly.
 
 ## Git Workflow
 
