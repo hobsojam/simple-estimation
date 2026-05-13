@@ -37,10 +37,12 @@ A lightweight, self-hosted web tool for agile estimation. Supports Planning Poke
 
 | Layer | Technology |
 |---|---|
-| Backend | Node.js, Express, ws |
-| Frontend | Svelte (compiled to static files, served by Express) |
+| Backend | Node.js, Express 5, `ws` |
+| Frontend | Svelte 4 (compiled to static files, served by Express) |
 | Real-time | WebSockets (single port, no Socket.io) |
 | Deployment | Docker (single container, single port) |
+| Rate limiting | `express-rate-limit` on HTTP endpoints |
+| Pin hashing | `bcryptjs` |
 
 No external services. No database. No cloud dependencies.
 
@@ -122,6 +124,43 @@ cd server && npm install && node index.js
 
 # Client (separate terminal)
 cd client && npm install && npm run dev
+```
+
+## Testing
+
+There are three independent test suites.
+
+### Server tests
+
+Uses Node.js's built-in test runner — no framework needed.
+
+```bash
+cd server && npm test
+```
+
+### Client component tests
+
+Vitest running against a real headless Chromium instance via Playwright. Install the browser binary once, then run tests:
+
+```bash
+cd client && npx playwright install chromium
+cd client && npm test
+```
+
+### End-to-end tests
+
+Playwright tests that drive the full running app. Build the client and start the server first:
+
+```bash
+cd client && npm run build
+cd server && node index.js &
+cd e2e && npx playwright install chromium && npm test
+```
+
+For an interactive Playwright UI:
+
+```bash
+cd e2e && npm run test:ui
 ```
 
 ## Docker

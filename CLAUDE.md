@@ -139,6 +139,24 @@ Static files are served from `./public` in production. The `STATIC_DIR` env var 
 - All inbound WebSocket messages must be validated before acting on them (check required fields, check facilitator permissions)
 - Facilitator-only actions (`reveal`, `reset`, `add_item`) must verify `ws.participantId === room.facilitatorId` server-side — never trust the client
 
+## Dependency changes
+
+When adding or removing npm packages, do all installs and uninstalls in one pass, then verify the lock file is clean before committing:
+
+```bash
+# Good — single pass
+npm install pkg-a pkg-b && npm uninstall pkg-c
+
+# If you've made multiple separate npm calls, regenerate the lock file:
+rm package-lock.json && npm install
+```
+
+Always commit both `package.json` and `package-lock.json` together.
+
+The client CI steps use `npm install` rather than `npm ci`. The lock file is generated on Windows (or macOS) and so does not contain Linux-specific optional packages (`@rolldown/binding-linux-x64-gnu` etc.) that `npm ci` on Linux requires to be pre-recorded. `npm install` uses the lock file for exact versions of everything it can, and resolves platform-specific optional packages for the current environment. The lock file is still worth committing — it pins the vast majority of packages to known-good versions.
+
+If this becomes a persistent problem (more deps with platform-specific optional binaries), the fix is to switch the client to **pnpm**, which handles cross-platform lock files correctly.
+
 ## Git Workflow
 
 - Feature work on `feat/<short-description>` branches, PRs targeting `main`
