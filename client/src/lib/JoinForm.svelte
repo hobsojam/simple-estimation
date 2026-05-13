@@ -1,22 +1,20 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
+  let { oncreate, onjoin } = $props();
 
-  const dispatch = createEventDispatcher();
-
-  let mode = 'join';
-  let roomId = '';
-  let name = '';
-  let pin = '';
-  let roomType = 'planning-poker';
+  let mode = $state('join');
+  let roomId = $state('');
+  let name = $state('');
+  let pin = $state('');
+  let roomType = $state('planning-poker');
 
   function handleCreate() {
     if (!name.trim()) return;
-    dispatch('create', { name: name.trim(), roomType, pin: pin.trim() || undefined });
+    oncreate?.({ name: name.trim(), roomType, pin: pin.trim() || undefined });
   }
 
   function handleJoin() {
     if (!name.trim() || !roomId.trim()) return;
-    dispatch('join', { roomId: roomId.trim(), name: name.trim(), pin: pin.trim() || undefined });
+    onjoin?.({ roomId: roomId.trim(), name: name.trim(), pin: pin.trim() || undefined });
   }
 </script>
 
@@ -26,9 +24,9 @@
   <div class="tabs">
     {#if mode === 'join'}
       <span class="tab active">Join Room</span>
-      <button class="tab" on:click={() => mode = 'create'}>Create Room</button>
+      <button class="tab" onclick={() => mode = 'create'}>Create Room</button>
     {:else}
-      <button class="tab" on:click={() => mode = 'join'}>Join Room</button>
+      <button class="tab" onclick={() => mode = 'join'}>Join Room</button>
       <span class="tab active">Create Room</span>
     {/if}
   </div>
@@ -48,7 +46,7 @@
         Facilitator PIN (optional)
         <input type="text" bind:value={pin} placeholder="Enter PIN if you have one" />
       </label>
-      <button class="primary" on:click={handleJoin} disabled={!name.trim() || !roomId.trim()}>
+      <button class="primary" onclick={handleJoin} disabled={!name.trim() || !roomId.trim()}>
         Join
       </button>
     {:else}
@@ -64,7 +62,7 @@
         Facilitator PIN (optional)
         <input type="text" bind:value={pin} placeholder="Set a PIN to protect facilitator role" />
       </label>
-      <button class="primary" on:click={handleCreate} disabled={!name.trim()}>
+      <button class="primary" onclick={handleCreate} disabled={!name.trim()}>
         Create Room
       </button>
     {/if}

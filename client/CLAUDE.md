@@ -4,7 +4,7 @@ Read the project README first. It is the source of truth for objectives, feature
 
 ## Stack
 
-- Svelte 4 + Vite 5
+- Svelte 5 + Vite 8
 - No UI framework — plain CSS only
 - Native browser WebSocket API (wrapped in `src/ws.js`)
 

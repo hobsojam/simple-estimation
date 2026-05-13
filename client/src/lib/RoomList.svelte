@@ -166,7 +166,7 @@
           </div>
 
           {#if ui.mode === 'confirm'}
-            <div class="inline-confirm" on:click|stopPropagation>
+            <div class="inline-confirm">
               <span class="confirm-msg">Are you sure?</span>
               <button class="confirm-yes-btn" on:click={() => confirmDelete(room.id)} disabled={ui.deleting}>
                 {ui.deleting ? 'Deleting…' : 'Yes, delete'}
@@ -179,7 +179,7 @@
               {/if}
             </div>
           {:else if ui.mode === 'pin'}
-            <div class="inline-confirm" on:click|stopPropagation>
+            <div class="inline-confirm">
               <input
                 class="pin-input"
                 type="text"

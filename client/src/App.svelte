@@ -41,8 +41,7 @@
     disconnect();
   });
 
-  async function handleCreate(event) {
-    const { name, roomType, pin } = event.detail;
+  async function handleCreate({ name, roomType, pin }) {
     createError = null;
     let roomId;
     try {
@@ -70,8 +69,7 @@
     page = 'joining';
   }
 
-  function handleJoin(event) {
-    const { roomId, name, pin } = event.detail;
+  function handleJoin({ roomId, name, pin }) {
     setUrlParams(roomId, null);
 
     joinSent = false;
@@ -126,7 +124,7 @@
 
 <div class="app">
   {#if page === 'home'}
-    <JoinForm on:create={handleCreate} on:join={handleJoin} />
+    <JoinForm oncreate={handleCreate} onjoin={handleJoin} />
     {#if createError}
       <div class="create-error">{createError}</div>
     {/if}

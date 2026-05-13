@@ -77,6 +77,8 @@
         {#each unplaced as item (item.id)}
           <div
             class="item-card"
+            role="button"
+            tabindex="0"
             draggable="true"
             on:dragstart={(e) => onDragStart(e, item.id)}
             on:dragend={onDragEnd}
@@ -105,6 +107,8 @@
                 {#each inColumn(fib) as item (item.id)}
                   <div
                     class="item-card"
+                    role="button"
+                    tabindex="0"
                     draggable="true"
                     on:dragstart={(e) => onDragStart(e, item.id)}
                     on:dragend={onDragEnd}

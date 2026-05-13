@@ -1,18 +1,12 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
-
-  export let value;
-  export let selected = false;
-  export let disabled = false;
-
-  const dispatch = createEventDispatcher();
+  let { value, selected = false, disabled = false, onselect } = $props();
 </script>
 
 <button
   class="card"
   class:selected
   {disabled}
-  on:click={() => { if (!disabled) dispatch('select', value); }}
+  onclick={() => { if (!disabled) onselect?.(value); }}
 >
   {value}
 </button>

@@ -34,36 +34,33 @@ describe('JoinForm', () => {
       expect(getByRole('button', { name: 'Join' })).toBeEnabled();
     });
 
-    it('dispatches join event with name and roomId', async () => {
-      const { getByRole, getByPlaceholderText, component } = render(JoinForm);
+    it('calls onjoin with name and roomId', async () => {
       const handler = vi.fn();
-      component.$on('join', handler);
+      const { getByRole, getByPlaceholderText } = render(JoinForm, { onjoin: handler });
       await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Alice' } });
       await fireEvent.input(getByPlaceholderText('Paste room ID'), { target: { value: 'abc-123' } });
       await fireEvent.click(getByRole('button', { name: 'Join' }));
       expect(handler).toHaveBeenCalledOnce();
-      expect(handler.mock.calls[0][0].detail).toMatchObject({ name: 'Alice', roomId: 'abc-123' });
+      expect(handler.mock.calls[0][0]).toMatchObject({ name: 'Alice', roomId: 'abc-123' });
     });
 
-    it('omits pin from join event when PIN field is empty', async () => {
-      const { getByRole, getByPlaceholderText, component } = render(JoinForm);
+    it('omits pin from onjoin when PIN field is empty', async () => {
       const handler = vi.fn();
-      component.$on('join', handler);
+      const { getByRole, getByPlaceholderText } = render(JoinForm, { onjoin: handler });
       await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Alice' } });
       await fireEvent.input(getByPlaceholderText('Paste room ID'), { target: { value: 'abc-123' } });
       await fireEvent.click(getByRole('button', { name: 'Join' }));
-      expect(handler.mock.calls[0][0].detail.pin).toBeUndefined();
+      expect(handler.mock.calls[0][0].pin).toBeUndefined();
     });
 
-    it('includes pin in join event when PIN field is filled', async () => {
-      const { getByRole, getByPlaceholderText, component } = render(JoinForm);
+    it('includes pin in onjoin when PIN field is filled', async () => {
       const handler = vi.fn();
-      component.$on('join', handler);
+      const { getByRole, getByPlaceholderText } = render(JoinForm, { onjoin: handler });
       await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Alice' } });
       await fireEvent.input(getByPlaceholderText('Paste room ID'), { target: { value: 'abc-123' } });
       await fireEvent.input(getByPlaceholderText('Enter PIN if you have one'), { target: { value: '1234' } });
       await fireEvent.click(getByRole('button', { name: 'Join' }));
-      expect(handler.mock.calls[0][0].detail.pin).toBe('1234');
+      expect(handler.mock.calls[0][0].pin).toBe('1234');
     });
   });
 
@@ -85,39 +82,36 @@ describe('JoinForm', () => {
       expect(submitBtn).toBeDisabled();
     });
 
-    it('dispatches create event with name and roomType', async () => {
-      const { getAllByRole, getByPlaceholderText, component } = render(JoinForm);
+    it('calls oncreate with name and roomType', async () => {
       const handler = vi.fn();
-      component.$on('create', handler);
+      const { getAllByRole, getByPlaceholderText } = render(JoinForm, { oncreate: handler });
       await fireEvent.click(getAllByRole('button', { name: 'Create Room' })[0]);
       await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Bob' } });
       const buttons = getAllByRole('button', { name: 'Create Room' });
       await fireEvent.click(buttons[buttons.length - 1]);
       expect(handler).toHaveBeenCalledOnce();
-      expect(handler.mock.calls[0][0].detail).toMatchObject({ name: 'Bob', roomType: 'planning-poker' });
+      expect(handler.mock.calls[0][0]).toMatchObject({ name: 'Bob', roomType: 'planning-poker' });
     });
 
-    it('omits pin from create event when PIN field is empty', async () => {
-      const { getAllByRole, getByPlaceholderText, component } = render(JoinForm);
+    it('omits pin from oncreate when PIN field is empty', async () => {
       const handler = vi.fn();
-      component.$on('create', handler);
+      const { getAllByRole, getByPlaceholderText } = render(JoinForm, { oncreate: handler });
       await fireEvent.click(getAllByRole('button', { name: 'Create Room' })[0]);
       await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Bob' } });
       const buttons = getAllByRole('button', { name: 'Create Room' });
       await fireEvent.click(buttons[buttons.length - 1]);
-      expect(handler.mock.calls[0][0].detail.pin).toBeUndefined();
+      expect(handler.mock.calls[0][0].pin).toBeUndefined();
     });
 
-    it('includes pin in create event when PIN field is filled', async () => {
-      const { getAllByRole, getByPlaceholderText, component } = render(JoinForm);
+    it('includes pin in oncreate when PIN field is filled', async () => {
       const handler = vi.fn();
-      component.$on('create', handler);
+      const { getAllByRole, getByPlaceholderText } = render(JoinForm, { oncreate: handler });
       await fireEvent.click(getAllByRole('button', { name: 'Create Room' })[0]);
       await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Bob' } });
       await fireEvent.input(getByPlaceholderText('Set a PIN to protect facilitator role'), { target: { value: 'secret' } });
       const buttons = getAllByRole('button', { name: 'Create Room' });
       await fireEvent.click(buttons[buttons.length - 1]);
-      expect(handler.mock.calls[0][0].detail.pin).toBe('secret');
+      expect(handler.mock.calls[0][0].pin).toBe('secret');
     });
   });
 });

@@ -124,7 +124,7 @@
                 value={card}
                 selected={selectedCard === card}
                 disabled={state.revealed}
-                on:select={() => castVote(card)}
+                onselect={() => castVote(card)}
               />
             {/each}
           </div>
