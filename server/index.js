@@ -4,6 +4,7 @@ const express = require('express');
 const { WebSocketServer } = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
 const { createRoom, getRoom, removeParticipant } = require('./rooms');
 const { handleMessage } = require('./handlers');
 const { sanitizeRoom } = require('./sanitize');
@@ -15,7 +16,24 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.resolve(STATIC_DIR)));
 
-app.post('/api/rooms', async (req, res) => {
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const createRoomLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many rooms created, please try again later' },
+});
+
+app.use('/api', apiLimiter);
+
+app.post('/api/rooms', createRoomLimiter, async (req, res) => {
   const { type, pin } = req.body;
   const validTypes = ['planning-poker', 'bucket', 'relative'];
   if (!type || !validTypes.includes(type)) {
