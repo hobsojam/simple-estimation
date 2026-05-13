@@ -4,7 +4,7 @@ test('create PIN-protected room, cast vote, leave, delete with correct PIN', asy
   await page.goto('/');
 
   // Switch to Create Room tab
-  await page.getByRole('button', { name: 'Create Room' }).click();
+  await page.getByRole('tab', { name: 'Create Room' }).click();
 
   // Fill in name and PIN (room type defaults to Planning Poker)
   await page.getByLabel('Your name').fill('Alice');

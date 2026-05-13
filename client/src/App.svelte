@@ -95,12 +95,10 @@
   }
 
   // Once state arrives, we are in the room. Send join message if we have pending join info.
-  $: if ($roomState && !joinSent && pendingJoin) {
+  $: if ($roomState && !joinSent && pendingJoin?.name) {
     joinSent = true;
     const { name, pin } = pendingJoin;
-    if (name) {
-      send({ type: 'join', name, ...(pin ? { pin } : {}) });
-    }
+    send({ type: 'join', name, ...(pin ? { pin } : {}) });
     page = 'room';
   }
 
