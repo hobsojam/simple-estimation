@@ -38,7 +38,7 @@ A lightweight, self-hosted web tool for agile estimation. Supports Planning Poke
 | Layer | Technology |
 |---|---|
 | Backend | Node.js, Express 5, `ws` |
-| Frontend | Svelte 4 (compiled to static files, served by Express) |
+| Frontend | Svelte 5 (compiled to static files, served by Express) |
 | Real-time | WebSockets (single port, no Socket.io) |
 | Deployment | Docker (single container, single port) |
 | Rate limiting | `express-rate-limit` on HTTP endpoints |
