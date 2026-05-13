@@ -1,0 +1,150 @@
+# simple-estimation — Project Context
+
+@CLAUDE_SECURITY.md
+
+## Purpose
+
+A self-hosted, real-time web tool for agile estimation. Supports Planning Poker and two Magic Estimation variants (bucket sizing, relative line sizing). Runs as a single Docker container with no external dependencies.
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Node.js, Express, `ws` |
+| Frontend | Svelte 4, Vite |
+| Real-time | WebSockets (native, no Socket.io) |
+| Deployment | Docker (single container, single port) |
+| Pin hashing | `bcryptjs` |
+
+No database. No external services. Room state is in-memory and ephemeral.
+
+## Project Structure
+
+```
+simple-estimation/
+├── Dockerfile
+├── docker-compose.yml
+├── server/
+│   ├── package.json        # express, ws, uuid, bcryptjs
+│   ├── index.js            # Express + WebSocket server, port 3000
+│   ├── rooms.js            # In-memory room state (Map)
+│   └── handlers.js         # WebSocket message handlers
+└── client/
+    ├── package.json        # svelte, vite, @sveltejs/vite-plugin-svelte
+    ├── vite.config.js      # WS proxy to :3000 in dev
+    ├── index.html
+    └── src/
+        ├── main.js
+        ├── App.svelte          # Routing: Home / Room
+        ├── ws.js               # WS client + roomState / wsError stores
+        └── lib/
+            ├── JoinForm.svelte
+            ├── PlanningPoker.svelte
+            ├── BucketEstimation.svelte
+            ├── RelativeEstimation.svelte
+            └── Card.svelte
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────┐
+│             Docker Container        │
+│                                     │
+│  Express (HTTP + static files)      │
+│    └── WS upgrade → ws server      │
+│                                     │
+│  In-memory: Map<roomId, RoomState>  │
+└─────────────────────────────────────┘
+```
+
+The Svelte app is compiled at Docker build time and served as static files by Express. WebSocket connections share port 3000 via HTTP upgrade.
+
+## Room State Shape
+
+```js
+{
+  id: string,                    // uuid
+  type: 'planning-poker' | 'bucket' | 'relative',
+  facilitatorId: string | null,
+  pinHash: string | null,        // bcryptjs hash — never sent to clients
+  participants: [{ id, name, vote: null | string }],
+  items: [{ id, label, position: null | string }],
+  revealed: boolean
+}
+```
+
+When broadcasting state to clients:
+- Always omit `pinHash`
+- Set `vote` to `null` for all participants when `revealed` is `false`
+
+## WebSocket Message Protocol
+
+All messages are JSON. Inbound (client → server):
+
+| type | Payload | Notes |
+|---|---|---|
+| `join` | `{ name, pin? }` | First joiner with correct pin becomes facilitator |
+| `claim_facilitator` | `{ pin }` | Verify with bcryptjs |
+| `vote` | `{ vote }` | Fibonacci: 1 2 3 5 8 13 21 ? ∞ ☕ |
+| `move_item` | `{ itemId, position }` | Bucket name or Fibonacci value |
+| `add_item` | `{ label }` | Facilitator only |
+| `reveal` | — | Facilitator only |
+| `reset` | — | Facilitator only |
+
+Outbound (server → client):
+
+| type | Payload |
+|---|---|
+| `state` | Full sanitised room state |
+| `error` | `{ message }` |
+
+## Development Workflow
+
+Run server and client in separate terminals:
+
+```bash
+# Terminal 1 — backend
+cd server && npm install && node index.js
+
+# Terminal 2 — frontend (Vite dev server with WS proxy)
+cd client && npm install && npm run dev
+```
+
+Vite proxies WebSocket connections to `localhost:3000` so the dev server works against the local Node backend without CORS issues.
+
+## Docker
+
+```bash
+# Build and run
+docker build -t simple-estimation .
+docker run -p 3000:3000 simple-estimation
+
+# Or with compose
+docker compose up
+```
+
+The Dockerfile is a two-stage build:
+1. `builder` stage: Node alpine, builds the Svelte client (`npm run build`)
+2. `runner` stage: Node alpine, installs server prod deps only, copies built client into `./public`
+
+Static files are served from `./public` in production. The `STATIC_DIR` env var overrides this path.
+
+## Conventions
+
+- Plain JavaScript throughout — no TypeScript
+- No comments unless the WHY is non-obvious
+- No external cloud dependencies — all runtime deps must be `npm` packages only
+- Server code never sends `pinHash` to any client under any circumstance
+- All inbound WebSocket messages must be validated before acting on them (check required fields, check facilitator permissions)
+- Facilitator-only actions (`reveal`, `reset`, `add_item`) must verify `ws.participantId === room.facilitatorId` server-side — never trust the client
+
+## Git Workflow
+
+- Feature work on `feat/<short-description>` branches, PRs targeting `main`
+- Never commit directly to `main`
+- Always include the co-author trailer in commit messages:
+  ```
+  Co-Authored-By: Claude Code <noreply@anthropic.com>
+  ```
+- Never force-push to `main`
