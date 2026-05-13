@@ -29,13 +29,13 @@ All text must meet the WCAG AA contrast minimums:
 
 ### Approved secondary-text colours
 
-| Use | Colour | Contrast on white |
+| Use | Colour | Contrast on `#f8fafc` (body bg) |
 |---|---|---|
 | Muted / secondary text | `#4b5563` | ≈ 7 : 1 ✓ |
 | Faint labels, column headers | `#4b5563` | ≈ 7 : 1 ✓ |
-| Room ID, monospace metadata | `#767676` | 4.54 : 1 ✓ |
+| Room ID, monospace metadata | `#4b5563` | ≈ 7 : 1 ✓ |
 
-**Do not use** `#888`, `#6b7280`, or `#9ca3af` for text — all fail AA at normal text size on the app's light backgrounds.
+**Do not use** `#888`, `#767676`, `#6b7280`, or `#9ca3af` for text — all fail AA at normal text size on the app's `#f8fafc` body background. (`#767676` is 4.54:1 on pure white but only 4.34:1 on `#f8fafc`.)
 
 ## Testing
 

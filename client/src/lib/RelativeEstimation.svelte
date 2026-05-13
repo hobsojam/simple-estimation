@@ -174,7 +174,7 @@
 
   .room-id {
     font-size: 0.85rem;
-    color: #767676;
+    color: #4b5563;
     font-family: monospace;
   }
 
