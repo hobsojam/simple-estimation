@@ -80,6 +80,10 @@ function resetRound(roomId) {
   }
 }
 
+function clearRooms() {
+  rooms.clear();
+}
+
 module.exports = {
   createRoom,
   getRoom,
@@ -91,4 +95,5 @@ module.exports = {
   addItem,
   revealVotes,
   resetRound,
+  clearRooms,
 };

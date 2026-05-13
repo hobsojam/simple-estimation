@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 const { createRoom, getRoom, removeParticipant } = require('./rooms');
 const { handleMessage } = require('./handlers');
+const { sanitizeRoom } = require('./sanitize');
 
 const PORT = process.env.PORT || 3000;
 const STATIC_DIR = process.env.STATIC_DIR || './public';
@@ -31,21 +32,6 @@ app.get('*', (req, res) => {
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
-
-function sanitizeRoom(room) {
-  return {
-    id: room.id,
-    type: room.type,
-    facilitatorId: room.facilitatorId,
-    revealed: room.revealed,
-    participants: room.participants.map(p => ({
-      id: p.id,
-      name: p.name,
-      vote: room.revealed ? p.vote : null,
-    })),
-    items: room.items,
-  };
-}
 
 function broadcastState(room, sockets) {
   const state = JSON.stringify({ type: 'state', room: sanitizeRoom(room) });
@@ -126,6 +112,10 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+  });
+}
+
+module.exports = { app };
