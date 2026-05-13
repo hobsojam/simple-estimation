@@ -3,3 +3,6 @@ client/dist/
 .env
 *.local
 .claude/
+e2e/test-results/
+e2e/playwright-report/
+e2e/.playwright-browsers/
