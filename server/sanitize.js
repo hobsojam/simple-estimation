@@ -1,0 +1,16 @@
+function sanitizeRoom(room) {
+  return {
+    id: room.id,
+    type: room.type,
+    facilitatorId: room.facilitatorId,
+    revealed: room.revealed,
+    participants: room.participants.map(p => ({
+      id: p.id,
+      name: p.name,
+      vote: room.revealed ? p.vote : null,
+    })),
+    items: room.items,
+  };
+}
+
+module.exports = { sanitizeRoom };
