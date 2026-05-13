@@ -24,8 +24,13 @@
   <h1>Simple Estimation</h1>
 
   <div class="tabs">
-    <button class:active={mode === 'join'} on:click={() => mode = 'join'}>Join Room</button>
-    <button class:active={mode === 'create'} on:click={() => mode = 'create'}>Create Room</button>
+    {#if mode === 'join'}
+      <span class="tab active">Join Room</span>
+      <button class="tab" on:click={() => mode = 'create'}>Create Room</button>
+    {:else}
+      <button class="tab" on:click={() => mode = 'join'}>Join Room</button>
+      <span class="tab active">Create Room</span>
+    {/if}
   </div>
 
   <div class="fields">
@@ -88,19 +93,25 @@
     border-bottom: 2px solid #eee;
   }
 
-  .tabs button {
+  .tab {
     flex: 1;
     padding: 10px;
     border: none;
     background: none;
-    cursor: pointer;
     font-size: 1rem;
     color: #666;
     border-bottom: 2px solid transparent;
     margin-bottom: -2px;
+    text-align: center;
+    font-family: inherit;
+    display: block;
   }
 
-  .tabs button.active {
+  button.tab {
+    cursor: pointer;
+  }
+
+  .tab.active {
     color: #2563eb;
     border-bottom-color: #2563eb;
     font-weight: 600;
