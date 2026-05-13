@@ -184,8 +184,8 @@
                 class="pin-input"
                 type="text"
                 placeholder="Enter PIN"
-                bind:value={ui.pin}
-                on:input={() => { roomState = { ...roomState }; }}
+                value={ui.pin}
+                on:input={(e) => { roomState[room.id].pin = e.target.value; roomState = { ...roomState }; }}
               />
               <button
                 class="confirm-yes-btn"
