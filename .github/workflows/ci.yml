@@ -32,8 +32,7 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: client/package-lock.json
-      - run: npm install -g npm@11
-      - run: npm ci
+      - run: npm install
         working-directory: client
       - run: npx playwright install --with-deps chromium
         working-directory: client
@@ -58,7 +57,7 @@ jobs:
             e2e/package-lock.json
       - run: npm ci
         working-directory: server
-      - run: npm ci
+      - run: npm install
         working-directory: client
       - run: npm run build
         working-directory: client

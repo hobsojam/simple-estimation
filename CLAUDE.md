@@ -151,7 +151,9 @@ npm install pkg-a pkg-b && npm uninstall pkg-c
 rm package-lock.json && npm install
 ```
 
-CI uses `npm ci`, which fails if `package.json` and `package-lock.json` are out of sync. Always commit both files together.
+Always commit both `package.json` and `package-lock.json` together.
+
+The client CI steps use `npm install` rather than `npm ci`. The lock file is generated on Windows (or macOS) and so does not contain Linux-specific optional packages (`@rolldown/binding-linux-x64-gnu` etc.) that `npm ci` on Linux requires to be pre-recorded. `npm install` uses the lock file for exact versions of everything it can, and resolves platform-specific optional packages for the current environment.
 
 ## Git Workflow
 
