@@ -62,7 +62,7 @@
         <h3>Participants</h3>
         <ul class="participant-list">
           {#each state.participants as p}
-            <li class="participant" class:voted={p.vote !== null}>
+            <li class="participant" class:voted={p.voted}>
               <span class="name">{p.name}</span>
               {#if p.id === state.facilitatorId}
                 <span class="badge">facilitator</span>
@@ -70,7 +70,7 @@
               <span class="vote-indicator">
                 {#if state.revealed && p.vote !== null}
                   <strong>{p.vote}</strong>
-                {:else if p.vote !== null}
+                {:else if p.voted}
                   ✓
                 {:else}
                   …

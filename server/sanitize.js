@@ -7,6 +7,7 @@ function sanitizeRoom(room) {
     participants: room.participants.map(p => ({
       id: p.id,
       name: p.name,
+      voted: p.vote !== null,
       vote: room.revealed ? p.vote : null,
     })),
     items: room.items,

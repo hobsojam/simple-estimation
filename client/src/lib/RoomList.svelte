@@ -142,7 +142,7 @@
   {:else}
     <ul class="room-rows">
       {#each rooms as room (room.id)}
-        {@const ui = getRoomUiState(room.id)}
+        {@const ui = roomState[room.id] ?? { mode: null, pin: '', error: null, deleting: false }}
         <li class="room-row">
           <div class="room-main">
             <div class="room-info">
