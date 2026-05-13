@@ -90,7 +90,7 @@ app.delete('/api/rooms/:id', async (req, res) => {
   res.status(204).end();
 });
 
-app.get('*', staticFallbackLimiter, (req, res) => {
+app.get('/{*path}', staticFallbackLimiter, (req, res) => {
   res.sendFile(path.resolve(STATIC_DIR, 'index.html'));
 });
 
