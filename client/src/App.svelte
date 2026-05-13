@@ -9,6 +9,7 @@
   let page = 'home';
   let pendingJoin = null;
   let joinSent = false;
+  let createError = null;
 
   function getUrlParams() {
     const params = new URLSearchParams(window.location.search);
@@ -41,6 +42,7 @@
 
   async function handleCreate(event) {
     const { name, roomType, pin } = event.detail;
+    createError = null;
     let roomId;
     try {
       const body = { type: roomType };
@@ -50,11 +52,13 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error('Failed to create room');
+      if (!res.ok) throw new Error('Server error: ' + res.status);
       const data = await res.json();
       roomId = data.id;
     } catch (err) {
-      page = 'home';
+      createError = err.message.includes('Failed to fetch')
+        ? 'Could not reach the server. Is it running?'
+        : err.message;
       return;
     }
 
@@ -114,6 +118,9 @@
 <div class="app">
   {#if page === 'home'}
     <JoinForm on:create={handleCreate} on:join={handleJoin} />
+    {#if createError}
+      <div class="create-error">{createError}</div>
+    {/if}
 
   {:else if page === 'joining'}
     <div class="loading">Connecting…</div>
@@ -175,6 +182,18 @@
 
   .app {
     min-height: 100vh;
+  }
+
+  .create-error {
+    max-width: 420px;
+    margin: -64px auto 0;
+    padding: 10px 14px;
+    background: #fee2e2;
+    border: 1px solid #f87171;
+    color: #b91c1c;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    text-align: center;
   }
 
   .loading {
