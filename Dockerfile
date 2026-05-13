@@ -1,9 +1,9 @@
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app/client
 COPY client/ .
 RUN npm ci && npm run build
 
-FROM node:20-alpine AS runner
+FROM node:26-alpine AS runner
 USER node
 WORKDIR /app
 COPY server/package*.json ./
