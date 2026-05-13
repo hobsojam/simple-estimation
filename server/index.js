@@ -134,7 +134,9 @@ wss.on('connection', (ws, req) => {
 
   ws.send(JSON.stringify({ type: 'state', room: sanitizeRoom(room) }));
 
-  ws.on('message', async (raw) => {
+  let messageChain = Promise.resolve();
+
+  ws.on('message', (raw) => {
     let data;
     try {
       data = JSON.parse(raw);
@@ -143,17 +145,19 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
-    const currentRoom = getRoom(roomId);
-    if (!currentRoom) {
-      ws.close(1008, 'Room not found');
-      return;
-    }
+    messageChain = messageChain.then(async () => {
+      const currentRoom = getRoom(roomId);
+      if (!currentRoom) {
+        ws.close(1008, 'Room not found');
+        return;
+      }
 
-    await handleMessage(ws, currentRoom, data);
+      await handleMessage(ws, currentRoom, data);
 
-    const updatedRoom = getRoom(roomId);
-    const sockets = roomSockets.get(roomId) || new Set();
-    broadcastState(updatedRoom, sockets);
+      const updatedRoom = getRoom(roomId);
+      const sockets = roomSockets.get(roomId) || new Set();
+      broadcastState(updatedRoom, sockets);
+    });
   });
 
   ws.on('close', () => {

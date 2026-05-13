@@ -1,6 +1,7 @@
 # simple-estimation — Project Context
 
 @CLAUDE_SECURITY.md
+@CLAUDE_ACCESSIBILITY.md
 
 ## Purpose
 

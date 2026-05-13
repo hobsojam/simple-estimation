@@ -1,5 +1,5 @@
 <script>
-  import { onMount, createEventDispatcher } from 'svelte';
+  import { onMount, createEventDispatcher, tick } from 'svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -51,7 +51,7 @@
     dispatch('join', { roomId });
   }
 
-  function startDelete(room) {
+  async function startDelete(room) {
     const s = getRoomUiState(room.id);
     if (room.pinProtected) {
       s.mode = 'pin';
@@ -62,6 +62,8 @@
       s.error = null;
     }
     roomState = { ...roomState };
+    await tick();
+    document.querySelector(`[data-room-id="${room.id}"] .inline-confirm input, [data-room-id="${room.id}"] .inline-confirm button`)?.focus();
   }
 
   function cancelDelete(roomId) {
@@ -70,6 +72,7 @@
     s.pin = '';
     s.error = null;
     roomState = { ...roomState };
+    document.querySelector(`[data-room-id="${roomId}"] .delete-btn`)?.focus();
   }
 
   async function confirmDelete(roomId) {
@@ -143,7 +146,7 @@
     <ul class="room-rows">
       {#each rooms as room (room.id)}
         {@const ui = roomState[room.id] ?? { mode: null, pin: '', error: null, deleting: false }}
-        <li class="room-row">
+        <li class="room-row" data-room-id={room.id}>
           <div class="room-main">
             <div class="room-info">
               <span class="room-type">{ROOM_TYPE_LABELS[room.type] ?? room.type}</span>
@@ -253,7 +256,7 @@
 
   .empty-msg {
     text-align: center;
-    color: #6b7280;
+    color: #4b5563;
     font-size: 0.95rem;
     padding: 20px 0;
     margin: 0;
@@ -306,7 +309,7 @@
 
   .room-id {
     font-size: 0.8rem;
-    color: #6b7280;
+    color: #4b5563;
     font-family: monospace;
     background: #f1f5f9;
     padding: 2px 5px;
@@ -315,7 +318,7 @@
 
   .participant-count {
     font-size: 0.85rem;
-    color: #6b7280;
+    color: #4b5563;
   }
 
   .pin-badge {

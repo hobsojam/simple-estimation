@@ -67,50 +67,43 @@ describe('JoinForm', () => {
   describe('create mode', () => {
     it('switches to create fields when Create Room tab is clicked', async () => {
       const { getByRole, getByPlaceholderText, queryByPlaceholderText } = render(JoinForm);
-      await fireEvent.click(getByRole('button', { name: 'Create Room' }));
+      await fireEvent.click(getByRole('tab', { name: 'Create Room' }));
       expect(queryByPlaceholderText('Paste room ID')).not.toBeInTheDocument();
       expect(getByPlaceholderText('Set a PIN to protect facilitator role')).toBeInTheDocument();
     });
 
     it('Create button is disabled with no name', async () => {
-      const { getAllByRole } = render(JoinForm);
-      const [, createTabBtn] = getAllByRole('button', { name: 'Create Room' });
-      // switch to create mode first
-      await fireEvent.click(getAllByRole('button', { name: 'Create Room' })[0]);
-      const buttons = getAllByRole('button', { name: 'Create Room' });
-      const submitBtn = buttons[buttons.length - 1];
-      expect(submitBtn).toBeDisabled();
+      const { getByRole } = render(JoinForm);
+      await fireEvent.click(getByRole('tab', { name: 'Create Room' }));
+      expect(getByRole('button', { name: 'Create Room' })).toBeDisabled();
     });
 
     it('calls oncreate with name and roomType', async () => {
       const handler = vi.fn();
-      const { getAllByRole, getByPlaceholderText } = render(JoinForm, { oncreate: handler });
-      await fireEvent.click(getAllByRole('button', { name: 'Create Room' })[0]);
+      const { getByRole, getByPlaceholderText } = render(JoinForm, { oncreate: handler });
+      await fireEvent.click(getByRole('tab', { name: 'Create Room' }));
       await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Bob' } });
-      const buttons = getAllByRole('button', { name: 'Create Room' });
-      await fireEvent.click(buttons[buttons.length - 1]);
+      await fireEvent.click(getByRole('button', { name: 'Create Room' }));
       expect(handler).toHaveBeenCalledOnce();
       expect(handler.mock.calls[0][0]).toMatchObject({ name: 'Bob', roomType: 'planning-poker' });
     });
 
     it('omits pin from oncreate when PIN field is empty', async () => {
       const handler = vi.fn();
-      const { getAllByRole, getByPlaceholderText } = render(JoinForm, { oncreate: handler });
-      await fireEvent.click(getAllByRole('button', { name: 'Create Room' })[0]);
+      const { getByRole, getByPlaceholderText } = render(JoinForm, { oncreate: handler });
+      await fireEvent.click(getByRole('tab', { name: 'Create Room' }));
       await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Bob' } });
-      const buttons = getAllByRole('button', { name: 'Create Room' });
-      await fireEvent.click(buttons[buttons.length - 1]);
+      await fireEvent.click(getByRole('button', { name: 'Create Room' }));
       expect(handler.mock.calls[0][0].pin).toBeUndefined();
     });
 
     it('includes pin in oncreate when PIN field is filled', async () => {
       const handler = vi.fn();
-      const { getAllByRole, getByPlaceholderText } = render(JoinForm, { oncreate: handler });
-      await fireEvent.click(getAllByRole('button', { name: 'Create Room' })[0]);
+      const { getByRole, getByPlaceholderText } = render(JoinForm, { oncreate: handler });
+      await fireEvent.click(getByRole('tab', { name: 'Create Room' }));
       await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Bob' } });
       await fireEvent.input(getByPlaceholderText('Set a PIN to protect facilitator role'), { target: { value: 'secret' } });
-      const buttons = getAllByRole('button', { name: 'Create Room' });
-      await fireEvent.click(buttons[buttons.length - 1]);
+      await fireEvent.click(getByRole('button', { name: 'Create Room' }));
       expect(handler.mock.calls[0][0].pin).toBe('secret');
     });
   });
