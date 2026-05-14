@@ -43,6 +43,7 @@ A lightweight, self-hosted web tool for agile estimation. Supports Planning Poke
 | Deployment | Docker (single container, single port) |
 | Rate limiting | `express-rate-limit` on HTTP endpoints |
 | Pin hashing | `bcryptjs` |
+| ID generation | `uuid` (rooms and items) |
 
 No external services. No database. No cloud dependencies.
 
@@ -72,6 +73,7 @@ All messages are JSON. Direction noted as C→S (client to server) or S→C (ser
 | `join` | C→S | Join a room with a display name and optional pin |
 | `claim_facilitator` | C→S | Claim facilitator role using the room pin |
 | `vote` | C→S | Cast a vote (Planning Poker) |
+| `add_item` | C→S | Facilitator adds an item (Magic Estimation) |
 | `move_item` | C→S | Move an item to a bucket or position (Magic Estimation) |
 | `reveal` | C→S | Facilitator reveals all votes |
 | `reset` | C→S | Facilitator resets the round |
@@ -80,15 +82,17 @@ All messages are JSON. Direction noted as C→S (client to server) or S→C (ser
 
 ### Room State Shape
 
+The `state` message sent to clients contains the sanitized room (pin hash is never sent):
+
 ```js
 {
   id: string,
   type: 'planning-poker' | 'bucket' | 'relative',
   facilitatorId: string | null,
-  pinHash: string | null,       // bcrypt hash of facilitator pin
-  participants: [{ id, name, vote }],
+  revealed: boolean,
+  participants: [{ id, name, voted: boolean, vote: string | null }],
+  // vote is null until revealed; voted indicates whether a card was placed
   items: [{ id, label, position }],  // magic estimation only
-  revealed: boolean
 }
 ```
 
@@ -102,7 +106,8 @@ simple-estimation/
 │   ├── package.json
 │   ├── index.js          # Express + ws setup
 │   ├── rooms.js          # Room state management
-│   └── handlers.js       # WebSocket message handlers
+│   ├── handlers.js       # WebSocket message handlers
+│   └── sanitize.js       # Strips sensitive fields before broadcast
 └── client/
     ├── package.json
     ├── vite.config.js
@@ -110,6 +115,8 @@ simple-estimation/
         ├── App.svelte
         ├── ws.js             # WebSocket client + store
         └── lib/
+            ├── JoinForm.svelte
+            ├── RoomList.svelte
             ├── PlanningPoker.svelte
             ├── BucketEstimation.svelte
             ├── RelativeEstimation.svelte
