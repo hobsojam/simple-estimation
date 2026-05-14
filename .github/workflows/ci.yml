@@ -24,10 +24,14 @@ jobs:
         working-directory: server
       - run: npx c8 --reporter=lcov node --test test/rooms.test.js test/handlers.test.js test/api.test.js test/sanitize.test.js
         working-directory: server
+      - run: npx stryker run
+        working-directory: server
       - uses: actions/upload-artifact@v4
         with:
-          name: server-coverage
-          path: server/coverage/lcov.info
+          name: server-reports
+          path: |
+            server/coverage/lcov.info
+            server/reports/mutation/mutation.json
 
   client-build:
     name: Client build
@@ -57,13 +61,13 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: server-coverage
-          path: coverage
+          name: server-reports
+          path: reports
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - run: pip install git+https://github.com/hobsojam/test-analysis.git@feat/ci-coverage
-      - run: tqa analyze --lcov coverage/lcov.info --format github > tqa-summary.md
+      - run: tqa analyze --lcov reports/server/coverage/lcov.info --stryker reports/server/reports/mutation/mutation.json --format github > tqa-summary.md
       - name: Comment on PR
         if: github.event_name == 'pull_request'
         run: gh pr comment ${{ github.event.number }} --body-file tqa-summary.md --repo ${{ github.repository }}
