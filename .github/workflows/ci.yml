@@ -22,8 +22,12 @@ jobs:
           cache-dependency-path: server/package-lock.json
       - run: npm ci
         working-directory: server
-      - run: npm test
+      - run: npx c8 --reporter=lcov node --test test/rooms.test.js test/handlers.test.js test/api.test.js test/sanitize.test.js
         working-directory: server
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-coverage
+          path: server/coverage/lcov.info
 
   client-build:
     name: Client build
@@ -43,6 +47,28 @@ jobs:
         working-directory: client
       - run: npm run build
         working-directory: client
+
+  tqa:
+    name: Test Quality Analysis
+    runs-on: ubuntu-latest
+    needs: server-test
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: server-coverage
+          path: coverage
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install git+https://github.com/hobsojam/test-analysis.git@feat/ci-coverage
+      - run: tqa analyze --lcov coverage/lcov.info --format github > tqa-summary.md
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        run: gh pr comment ${{ github.event.number }} --body-file tqa-summary.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   e2e:
     name: E2E tests
