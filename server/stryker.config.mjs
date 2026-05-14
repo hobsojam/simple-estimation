@@ -1,0 +1,10 @@
+export default {
+  packageManager: 'npm',
+  reporters: ['json', 'progress'],
+  testRunner: 'command',
+  commandRunner: {
+    command: 'node --test test/rooms.test.js test/handlers.test.js test/api.test.js test/sanitize.test.js',
+  },
+  coverageAnalysis: 'off',
+  mutate: ['handlers.js', 'rooms.js', 'sanitize.js'],
+};
