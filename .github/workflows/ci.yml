@@ -66,7 +66,7 @@ jobs:
       - run: tqa analyze --lcov coverage/lcov.info --format github > tqa-summary.md
       - name: Comment on PR
         if: github.event_name == 'pull_request'
-        run: gh pr comment ${{ github.event.number }} --body-file tqa-summary.md
+        run: gh pr comment ${{ github.event.number }} --body-file tqa-summary.md --repo ${{ github.repository }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
