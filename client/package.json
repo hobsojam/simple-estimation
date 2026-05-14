@@ -16,7 +16,7 @@
     "@vitest/browser-playwright": "^4.1.6",
     "esbuild": "^0.28.0",
     "playwright": "^1.60.0",
-    "svelte": "^5.46.4",
+    "svelte": "^5.55.7",
     "vite": "^8.0.0",
     "vitest": "^4.1.6"
   }
