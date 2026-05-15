@@ -1,4 +1,5 @@
 <script>
+  import { onDestroy } from 'svelte';
   import { roomState, send, wsError, myId } from '../ws.js';
   import Card from './Card.svelte';
   import { getMajorityVote, buildCSV } from './poker-utils.js';
@@ -12,6 +13,10 @@
   let finaliseEstimate = '';
   let trackedActiveId = null;
   let wasRevealed = false;
+  let timerDuration = 60;
+  let remaining = null;
+  let timerId = null;
+  let trackedEndsAt = null;
 
   $: state = $roomState;
   $: isFacilitator = state && $myId && state.facilitatorId === $myId;
@@ -36,6 +41,34 @@
     }
     wasRevealed = !!state?.revealed;
   }
+
+  // Sync client-side countdown with server timer state
+  $: {
+    const endsAt = state?.timer?.endsAt ?? null;
+    if (endsAt !== trackedEndsAt) {
+      trackedEndsAt = endsAt;
+      if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+      if (endsAt !== null) {
+        remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+        timerId = setInterval(() => {
+          remaining = Math.max(0, Math.ceil((trackedEndsAt - Date.now()) / 1000));
+          if (remaining <= 0) {
+            clearInterval(timerId);
+            timerId = null;
+          }
+        }, 250);
+      } else {
+        remaining = null;
+      }
+    }
+  }
+
+  onDestroy(() => {
+    if (timerId) clearInterval(timerId);
+  });
 
   function castVote(card) {
     selectedCard = card;
@@ -76,6 +109,14 @@
 
   function removeItem(itemId) {
     send({ type: 'remove_item', itemId });
+  }
+
+  function startTimer() {
+    send({ type: 'start_timer', seconds: timerDuration });
+  }
+
+  function cancelTimer() {
+    send({ type: 'cancel_timer' });
   }
 
   function downloadCSV() {
@@ -216,6 +257,46 @@
             <p class="no-active-hint">Select an item from the backlog to start voting</p>
           {/if}
         </div>
+
+        {#if remaining !== null}
+          <div class="timer-section">
+            <div
+              class="timer-bar"
+              role="progressbar"
+              aria-label="Time remaining"
+              aria-valuenow={remaining}
+              aria-valuemin={0}
+              aria-valuemax={state.timer.durationSeconds}
+            >
+              <div
+                class="timer-bar-fill"
+                style="width: {Math.max(0, remaining / state.timer.durationSeconds * 100)}%"
+              ></div>
+            </div>
+            <p class="timer-countdown" role="timer" aria-live="off">
+              {remaining}s remaining
+            </p>
+            {#if isFacilitator}
+              <button class="secondary" on:click={cancelTimer}>Cancel Timer</button>
+            {/if}
+          </div>
+        {/if}
+
+        {#if isFacilitator && !state.revealed && remaining === null}
+          <div class="timer-start">
+            <label for="timer-duration" class="sr-only">Timer duration in seconds</label>
+            <input
+              id="timer-duration"
+              type="number"
+              min="5"
+              max="300"
+              bind:value={timerDuration}
+              class="timer-input"
+            />
+            <span class="timer-unit">sec</span>
+            <button class="secondary" on:click={startTimer}>Start Timer</button>
+          </div>
+        {/if}
 
         {#if isFacilitator}
           <div class="facilitator-controls">
@@ -777,6 +858,57 @@
     font-size: 0.85rem;
     color: #4b5563;
     margin: 0;
+  }
+
+  .timer-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+  }
+
+  .timer-bar {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .timer-bar-fill {
+    height: 100%;
+    background: #f59e0b;
+    border-radius: 4px;
+    transition: width 0.25s linear;
+  }
+
+  .timer-countdown {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #92400e;
+  }
+
+  .timer-start {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .timer-input {
+    width: 64px;
+    padding: 6px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .timer-unit {
+    font-size: 0.9rem;
+    color: #4b5563;
   }
 
   .sr-only {

@@ -19,6 +19,7 @@ A lightweight, self-hosted web tool for agile estimation. Supports Planning Poke
 - After reveal, the facilitator accepts the majority vote (or picks a custom value) to finalise the item
 - Finalised items appear in a Done history with their agreed estimate
 - **CSV export**: download a two-column spreadsheet (`Item, Estimate`) for all done items
+- Facilitator can start a countdown timer (5–300 seconds); votes auto-reveal when it expires
 - Facilitator can reset the round for re-voting on the same story
 
 ### Magic Estimation — Bucket Mode
@@ -84,6 +85,8 @@ All messages are JSON. Direction noted as C→S (client to server) or S→C (ser
 | `move_item` | C→S | Move an item to a bucket or position (Magic Estimation) |
 | `reveal` | C→S | Facilitator reveals all votes |
 | `reset` | C→S | Facilitator resets the round |
+| `start_timer` | C→S | Facilitator starts a countdown timer (5–300 s); votes auto-reveal on expiry (Planning Poker) |
+| `cancel_timer` | C→S | Facilitator cancels the running countdown (Planning Poker) |
 | `state` | S→C | Full room state broadcast to all participants |
 | `error` | S→C | Error message (e.g. wrong pin) |
 
@@ -98,6 +101,8 @@ The `state` message sent to clients contains the sanitized room (pin hash is nev
   name: string | null,
   facilitatorId: string | null,
   revealed: boolean,
+  timer: { endsAt: number | null, durationSeconds: number | null },
+  // endsAt is a Unix ms timestamp; null when no timer is running
   participants: [{ id, name, voted: boolean, vote: string | null }],
   // vote is null until revealed; voted indicates whether a card was placed
 

@@ -12,6 +12,7 @@ function createRoom(type, pinHash, name) {
     participants: [],
     items: [],
     revealed: false,
+    timer: { endsAt: null, durationSeconds: null },
   };
   rooms.set(room.id, room);
   return room;
@@ -76,10 +77,23 @@ function revealVotes(roomId) {
   room.revealed = true;
 }
 
+function startTimer(roomId, durationSeconds) {
+  const room = rooms.get(roomId);
+  if (!room) return;
+  room.timer = { endsAt: Date.now() + durationSeconds * 1000, durationSeconds };
+}
+
+function clearTimer(roomId) {
+  const room = rooms.get(roomId);
+  if (!room) return;
+  room.timer = { endsAt: null, durationSeconds: null };
+}
+
 function resetRound(roomId) {
   const room = rooms.get(roomId);
   if (!room) return;
   room.revealed = false;
+  room.timer = { endsAt: null, durationSeconds: null };
   for (const p of room.participants) {
     p.vote = null;
   }
@@ -136,6 +150,8 @@ module.exports = {
   removeItem,
   revealVotes,
   resetRound,
+  startTimer,
+  clearTimer,
   deleteRoom,
   clearRooms,
 };

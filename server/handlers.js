@@ -11,6 +11,8 @@ const {
   removeItem,
   revealVotes,
   resetRound,
+  startTimer,
+  clearTimer,
 } = require('./rooms');
 
 const VALID_VOTES = new Set(['1', '2', '3', '5', '8', '13', '21', '?', '∞', '☕']);
@@ -132,6 +134,7 @@ async function handleMessage(ws, room, data) {
 
     case 'reveal': {
       if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can reveal votes');
+      clearTimer(room.id);
       revealVotes(room.id);
       break;
     }
@@ -139,6 +142,23 @@ async function handleMessage(ws, room, data) {
     case 'reset': {
       if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can reset the round');
       resetRound(room.id);
+      break;
+    }
+
+    case 'start_timer': {
+      if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can start the timer');
+      if (room.type !== 'planning-poker') return sendError(ws, 'Timer is only available in Planning Poker rooms');
+      const seconds = Number(data.seconds);
+      if (!Number.isInteger(seconds) || seconds < 5 || seconds > 300) {
+        return sendError(ws, 'Timer duration must be between 5 and 300 seconds');
+      }
+      startTimer(room.id, seconds);
+      break;
+    }
+
+    case 'cancel_timer': {
+      if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can cancel the timer');
+      clearTimer(room.id);
       break;
     }
 
