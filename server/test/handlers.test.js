@@ -73,6 +73,47 @@ describe('handlers', () => {
       assert.equal(room.facilitatorId, 'p1');
       assert.equal(ws.messages.length, 0);
     });
+
+    it('errors when access PIN required but not provided', async () => {
+      const accessPinHash = await bcrypt.hash('guest', 10);
+      const room = createRoom('planning-poker', null, null, accessPinHash);
+      const ws = mockWs('p1');
+      ws.isAuthorized = false;
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      assert.equal(ws.messages[0].type, 'error');
+      assert.equal(ws.isAuthorized, false);
+    });
+
+    it('errors on wrong access PIN', async () => {
+      const accessPinHash = await bcrypt.hash('guest', 10);
+      const room = createRoom('planning-poker', null, null, accessPinHash);
+      const ws = mockWs('p1');
+      ws.isAuthorized = false;
+      await handleMessage(ws, room, { type: 'join', name: 'Alice', accessPin: 'wrong' });
+      assert.equal(ws.messages[0].type, 'error');
+      assert.equal(ws.isAuthorized, false);
+    });
+
+    it('correct access PIN grants authorization', async () => {
+      const accessPinHash = await bcrypt.hash('guest', 10);
+      const room = createRoom('planning-poker', null, null, accessPinHash);
+      const ws = mockWs('p1');
+      ws.isAuthorized = false;
+      await handleMessage(ws, room, { type: 'join', name: 'Alice', accessPin: 'guest' });
+      assert.equal(ws.isAuthorized, true);
+      assert.equal(ws.messages.length, 0);
+    });
+
+    it('handles both access PIN and facilitator PIN', async () => {
+      const pinHash = await bcrypt.hash('admin', 10);
+      const accessPinHash = await bcrypt.hash('guest', 10);
+      const room = createRoom('planning-poker', pinHash, null, accessPinHash);
+      const ws = mockWs('p1');
+      ws.isAuthorized = false;
+      await handleMessage(ws, room, { type: 'join', name: 'Alice', accessPin: 'guest', pin: 'admin' });
+      assert.equal(ws.isAuthorized, true);
+      assert.equal(room.facilitatorId, 'p1');
+    });
   });
 
   describe('vote', () => {

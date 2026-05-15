@@ -41,12 +41,13 @@
     disconnect();
   });
 
-  async function handleCreate({ name, roomType, pin, roomName }) {
+  async function handleCreate({ name, roomType, pin, accessPin, roomName }) {
     createError = null;
     let roomId;
     try {
       const body = { type: roomType };
       if (pin) body.pin = pin;
+      if (accessPin) body.accessPin = accessPin;
       if (roomName) body.name = roomName;
       const res = await fetch('/api/rooms', {
         method: 'POST',
@@ -66,16 +67,16 @@
     setUrlParams(roomId, roomType);
     joinSent = false;
     connect(roomId);
-    pendingJoin = { name, pin };
+    pendingJoin = { name, pin, accessPin };
     page = 'joining';
   }
 
-  function handleJoin({ roomId, name, pin }) {
+  function handleJoin({ roomId, name, pin, accessPin }) {
     setUrlParams(roomId, null);
 
     joinSent = false;
     connect(roomId);
-    pendingJoin = { name, pin };
+    pendingJoin = { name, pin, accessPin };
     page = 'joining';
   }
 
@@ -97,25 +98,72 @@
 
   // Once state arrives, we are in the room. Send join message if we have pending join info.
   $: if ($roomState && !joinSent && pendingJoin?.name) {
-    joinSent = true;
-    const { name, pin } = pendingJoin;
-    send({ type: 'join', name, ...(pin ? { pin } : {}) });
-    page = 'room';
+    console.log('[App] Reactive Join:', { accessRequired: $roomState.accessRequired, pendingAccessPin: !!pendingJoin.accessPin });
+    if ($roomState.accessRequired && !pendingJoin.accessPin) {
+      console.log('[App] Transition to room-access-pin (pending join)');
+      page = 'room-access-pin';
+    } else {
+      console.log('[App] Sending join message');
+      joinSent = true;
+      const { name, pin, accessPin } = pendingJoin;
+      send({
+        type: 'join',
+        name,
+        ...(pin ? { pin } : {}),
+        ...(accessPin ? { accessPin } : {})
+      });
+      page = 'room';
+    }
   }
 
   // If we arrive via URL without a name (direct link), show the name prompt after connecting
   $: if ($roomState && page === 'joining' && !pendingJoin?.name) {
-    page = 'room-enter-name';
+    console.log('[App] Direct link state arrived:', { accessRequired: $roomState.accessRequired });
+    if ($roomState.accessRequired) {
+      page = 'room-access-pin';
+    } else {
+      page = 'room-enter-name';
+    }
   }
 
   let directName = '';
   let directPin = '';
+  let directAccessPin = '';
 
   function handleDirectJoin() {
+    console.log('[App] handleDirectJoin', { directName, directAccessPin });
     if (!directName.trim()) return;
     joinSent = true;
-    send({ type: 'join', name: directName.trim(), ...(directPin.trim() ? { pin: directPin.trim() } : {}) });
+    send({
+      type: 'join',
+      name: directName.trim(),
+      ...(directPin.trim() ? { pin: directPin.trim() } : {}),
+      ...(directAccessPin.trim() ? { accessPin: directAccessPin.trim() } : {})
+    });
     page = 'room';
+  }
+
+  function handleAccessPinSubmit() {
+    console.log('[App] handleAccessPinSubmit', { directAccessPin });
+    if ($roomState?.accessRequired && !directAccessPin.trim()) return;
+    
+    if (pendingJoin?.name) {
+      pendingJoin = { ...pendingJoin, accessPin: directAccessPin.trim() };
+    } else {
+      page = 'room-enter-name';
+    }
+  }
+
+  $: if ($wsError) {
+    console.log('[App] wsError detected:', $wsError, 'current page:', page);
+    joinSent = false;
+    if (page === 'room' && $roomState?.accessRequired) {
+      console.log('[App] Transition back to room-access-pin due to error');
+      page = 'room-access-pin';
+    } else if (page === 'room') {
+      console.log('[App] Transition back to room-enter-name due to error');
+      page = 'room-enter-name';
+    }
   }
 
   $: roomType = $roomState?.type;
@@ -143,13 +191,36 @@
       <div class="error-center" role="alert">{$wsError}</div>
     {/if}
 
+  {:else if page === 'room-access-pin'}
+    <div class="name-prompt">
+      <h2>Room Protected</h2>
+      <p>This room requires an access PIN.</p>
+      {#if $wsError}
+        <div class="error-msg" role="alert">{$wsError}</div>
+      {/if}
+      <label>
+        Access PIN
+        <input type="text" bind:value={directAccessPin} placeholder="Enter access PIN" on:keydown={(e) => e.key === 'Enter' && handleAccessPinSubmit()} />
+      </label>
+      <button class="primary" on:click={handleAccessPinSubmit} disabled={!directAccessPin.trim()}>Continue</button>
+    </div>
+
   {:else if page === 'room-enter-name'}
     <div class="name-prompt">
       <h2>Join Room</h2>
+      {#if $wsError}
+        <div class="error-msg" role="alert">{$wsError}</div>
+      {/if}
       <label>
         Your name
-        <input type="text" bind:value={directName} placeholder="Enter your name" />
+        <input type="text" bind:value={directName} placeholder="Enter your name" on:keydown={(e) => e.key === 'Enter' && handleDirectJoin()} />
       </label>
+      {#if $roomState?.accessRequired}
+        <label>
+          Access PIN
+          <input type="text" bind:value={directAccessPin} placeholder="Enter access PIN" />
+        </label>
+      {/if}
       <label>
         Facilitator PIN (optional)
         <input type="text" bind:value={directPin} placeholder="Enter PIN if you have one" />
@@ -211,6 +282,16 @@
     color: #b91c1c;
     border-radius: 4px;
     font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .error-msg {
+    padding: 8px 12px;
+    background: #fee2e2;
+    border: 1px solid #f87171;
+    color: #b91c1c;
+    border-radius: 4px;
+    font-size: 0.85rem;
     text-align: center;
   }
 

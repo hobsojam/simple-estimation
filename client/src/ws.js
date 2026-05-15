@@ -46,6 +46,7 @@ function openConnection() {
   socket.addEventListener('message', (event) => {
     try {
       const msg = JSON.parse(event.data);
+      console.log('[WS] Received:', msg.type, msg.message || '');
       if (msg.type === 'state') {
         roomState.set(msg.room);
       } else if (msg.type === 'error') {

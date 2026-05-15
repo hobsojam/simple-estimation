@@ -1,4 +1,13 @@
-function sanitizeRoom(room) {
+function sanitizeRoom(room, isAuthorized = true) {
+  if (!isAuthorized) {
+    return {
+      id: room.id,
+      type: room.type,
+      name: room.name,
+      accessRequired: true,
+    };
+  }
+
   return {
     id: room.id,
     type: room.type,

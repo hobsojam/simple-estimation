@@ -37,13 +37,15 @@ describe('POST /api/rooms', () => {
     assert.equal(res.status, 400);
   });
 
-  it('does not echo the pin back in the response', async () => {
+  it('does not echo the pins back in the response', async () => {
     const res = await request(app)
       .post('/api/rooms')
-      .send({ type: 'planning-poker', pin: 'hunter2' });
+      .send({ type: 'planning-poker', pin: 'hunter2', accessPin: 'guest' });
     assert.equal(res.status, 200);
     assert.ok(!('pin' in res.body));
     assert.ok(!('pinHash' in res.body));
+    assert.ok(!('accessPin' in res.body));
+    assert.ok(!('accessPinHash' in res.body));
   });
 
   it('accepts an optional name', async () => {
@@ -64,12 +66,19 @@ describe('POST /api/rooms', () => {
 });
 
 describe('GET /api/rooms', () => {
-  it('includes name in room listing', async () => {
-    await request(app).post('/api/rooms').send({ type: 'planning-poker', name: 'My Room' });
+  it('includes name and pin protections in room listing', async () => {
+    await request(app).post('/api/rooms').send({
+      type: 'planning-poker',
+      name: 'Protected Room',
+      pin: 'admin',
+      accessPin: 'guest'
+    });
     const res = await request(app).get('/api/rooms');
     assert.equal(res.status, 200);
-    const room = res.body.find(r => r.name === 'My Room');
-    assert.ok(room, 'room with name "My Room" should appear in listing');
+    const room = res.body.find(r => r.name === 'Protected Room');
+    assert.ok(room, 'room with name "Protected Room" should appear in listing');
+    assert.equal(room.pinProtected, true);
+    assert.equal(room.accessPinProtected, true);
   });
 
   it('includes name as null for rooms created without a name', async () => {

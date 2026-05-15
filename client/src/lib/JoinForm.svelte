@@ -7,6 +7,7 @@
   let roomId = $state('');
   let name = $state('');
   let pin = $state('');
+  let accessPin = $state('');
   let roomType = $state('planning-poker');
   let roomName = $state('');
 
@@ -15,12 +16,23 @@
 
   function handleCreate() {
     if (!name.trim()) return;
-    oncreate?.({ name: name.trim(), roomType, pin: pin.trim() || undefined, roomName: roomName.trim() || undefined });
+    oncreate?.({
+      name: name.trim(),
+      roomType,
+      pin: pin.trim() || undefined,
+      accessPin: accessPin.trim() || undefined,
+      roomName: roomName.trim() || undefined
+    });
   }
 
   function handleJoin() {
     if (!name.trim() || !roomId.trim()) return;
-    onjoin?.({ roomId: roomId.trim(), name: name.trim(), pin: pin.trim() || undefined });
+    onjoin?.({
+      roomId: roomId.trim(),
+      name: name.trim(),
+      pin: pin.trim() || undefined,
+      accessPin: accessPin.trim() || undefined
+    });
   }
 
   async function switchTab(next) {
@@ -87,6 +99,10 @@
         <input type="text" bind:value={roomId} placeholder="Paste room ID" />
       </label>
       <label>
+        Room Access PIN (if required)
+        <input type="text" bind:value={accessPin} placeholder="Enter room access PIN" />
+      </label>
+      <label>
         Facilitator PIN (optional)
         <input type="text" bind:value={pin} placeholder="Enter PIN if you have one" />
       </label>
@@ -105,6 +121,10 @@
       <label>
         Room name (optional)
         <input type="text" bind:value={roomName} placeholder="e.g. Sprint 42 Planning" maxlength="200" />
+      </label>
+      <label>
+        Room Access PIN (optional)
+        <input type="text" bind:value={accessPin} placeholder="Limit room access to specific people" />
       </label>
       <label>
         Facilitator PIN (optional)

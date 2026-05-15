@@ -62,6 +62,16 @@ describe('JoinForm', () => {
       await fireEvent.click(getByRole('button', { name: 'Join' }));
       expect(handler.mock.calls[0][0].pin).toBe('1234');
     });
+
+    it('includes accessPin in onjoin when access PIN field is filled', async () => {
+      const handler = vi.fn();
+      const { getByRole, getByPlaceholderText } = render(JoinForm, { onjoin: handler });
+      await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Alice' } });
+      await fireEvent.input(getByPlaceholderText('Paste room ID'), { target: { value: 'abc-123' } });
+      await fireEvent.input(getByPlaceholderText('Enter room access PIN'), { target: { value: 'guest' } });
+      await fireEvent.click(getByRole('button', { name: 'Join' }));
+      expect(handler.mock.calls[0][0].accessPin).toBe('guest');
+    });
   });
 
   describe('create mode', () => {
@@ -70,6 +80,7 @@ describe('JoinForm', () => {
       await fireEvent.click(getByRole('tab', { name: 'Create Room' }));
       expect(queryByPlaceholderText('Paste room ID')).not.toBeInTheDocument();
       expect(getByPlaceholderText('Set a PIN to protect facilitator role')).toBeInTheDocument();
+      expect(getByPlaceholderText('Limit room access to specific people')).toBeInTheDocument();
     });
 
     it('Create button is disabled with no name', async () => {
@@ -105,6 +116,16 @@ describe('JoinForm', () => {
       await fireEvent.input(getByPlaceholderText('Set a PIN to protect facilitator role'), { target: { value: 'secret' } });
       await fireEvent.click(getByRole('button', { name: 'Create Room' }));
       expect(handler.mock.calls[0][0].pin).toBe('secret');
+    });
+
+    it('includes accessPin in oncreate when access PIN field is filled', async () => {
+      const handler = vi.fn();
+      const { getByRole, getByPlaceholderText } = render(JoinForm, { oncreate: handler });
+      await fireEvent.click(getByRole('tab', { name: 'Create Room' }));
+      await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Bob' } });
+      await fireEvent.input(getByPlaceholderText('Limit room access to specific people'), { target: { value: 'guest' } });
+      await fireEvent.click(getByRole('button', { name: 'Create Room' }));
+      expect(handler.mock.calls[0][0].accessPin).toBe('guest');
     });
 
     it('includes roomName in oncreate when room name field is filled', async () => {

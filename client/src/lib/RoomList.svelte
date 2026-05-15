@@ -156,7 +156,10 @@
               <span class="room-id">{room.id.slice(0, 8)}</span>
               <span class="participant-count">{room.participantCount} participant{room.participantCount === 1 ? '' : 's'}</span>
               {#if room.pinProtected}
-                <span class="pin-badge" title="PIN protected">PIN</span>
+                <span class="pin-badge" title="Facilitator PIN protected">Admin</span>
+              {/if}
+              {#if room.accessPinProtected}
+                <span class="access-pin-badge" title="Access PIN protected">Protected</span>
               {/if}
             </div>
             <div class="room-actions">
@@ -335,6 +338,17 @@
     color: #92400e;
     background: #fef3c7;
     border: 1px solid #fde68a;
+    border-radius: 4px;
+    padding: 1px 5px;
+    letter-spacing: 0.04em;
+  }
+
+  .access-pin-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #1e40af;
+    background: #dbeafe;
+    border: 1px solid #bfdbfe;
     border-radius: 4px;
     padding: 1px 5px;
     letter-spacing: 0.04em;
