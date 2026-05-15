@@ -59,4 +59,14 @@ describe('sanitizeRoom', () => {
     assert.equal(result.participants[0].id, 'p1');
     assert.equal(result.participants[0].name, 'Alice');
   });
+
+  it('passes through planning-poker item shape unchanged', () => {
+    const planningPokerItems = [
+      { id: 'i1', label: 'Story A', status: 'done', estimate: '5' },
+      { id: 'i2', label: 'Story B', status: 'active', estimate: null },
+      { id: 'i3', label: 'Story C', status: 'pending', estimate: null },
+    ];
+    const result = sanitizeRoom({ ...baseRoom, items: planningPokerItems });
+    assert.deepEqual(result.items, planningPokerItems);
+  });
 });
