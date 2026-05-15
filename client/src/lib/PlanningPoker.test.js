@@ -1,18 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
-import { writable, readable } from 'svelte/store';
 import PlanningPoker from './PlanningPoker.svelte';
+import { roomState, send } from '../ws.js';
 
-const mockSend = vi.fn();
-const mockRoomState = writable(null);
-const mockWsError = writable(null);
-
-vi.mock('../ws.js', () => ({
-  roomState: mockRoomState,
-  wsError: mockWsError,
-  myId: readable('user-1'),
-  send: mockSend,
-}));
+vi.mock('../ws.js', async () => {
+  const { writable, readable } = await import('svelte/store');
+  return {
+    roomState: writable(null),
+    wsError: writable(null),
+    myId: readable('user-1'),
+    send: vi.fn(),
+  };
+});
 
 const baseState = {
   id: 'room-1',
@@ -27,13 +26,12 @@ const baseState = {
 
 describe('Reveal Votes button', () => {
   beforeEach(() => {
-    mockRoomState.set(null);
-    mockWsError.set(null);
-    mockSend.mockClear();
+    roomState.set(null);
+    send.mockClear();
   });
 
   it('is disabled when no participant has voted', () => {
-    mockRoomState.set({
+    roomState.set({
       ...baseState,
       participants: [
         { id: 'user-1', name: 'Alice', voted: false, vote: null },
@@ -45,7 +43,7 @@ describe('Reveal Votes button', () => {
   });
 
   it('is enabled when at least one participant has voted', () => {
-    mockRoomState.set({
+    roomState.set({
       ...baseState,
       participants: [
         { id: 'user-1', name: 'Alice', voted: true, vote: null },
@@ -57,7 +55,7 @@ describe('Reveal Votes button', () => {
   });
 
   it('is disabled when votes are already revealed', () => {
-    mockRoomState.set({
+    roomState.set({
       ...baseState,
       revealed: true,
       participants: [
@@ -69,7 +67,7 @@ describe('Reveal Votes button', () => {
   });
 
   it('is enabled when multiple participants have voted', () => {
-    mockRoomState.set({
+    roomState.set({
       ...baseState,
       participants: [
         { id: 'user-1', name: 'Alice', voted: true, vote: null },
