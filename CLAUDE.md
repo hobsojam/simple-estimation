@@ -171,6 +171,22 @@ If this becomes a persistent problem (more deps with platform-specific optional 
   ```
 - Never force-push to `main`
 
-## PowerShell notes (Windows)
+## Shell tool selection (Windows)
 
-The shell is PowerShell 5.1. Here-string syntax (`@'...'@`) works for commit messages passed to `git commit -m`, but `gh pr create --body` does not accept a PowerShell variable when the value contains backtick characters — the shell interprets them as escape sequences before `gh` sees them. Always use `--body-file <path>` for PR bodies: write the markdown to a temp file, pass the path, then delete the file.
+This project runs on Windows with PowerShell 5.1 as the login shell.
+
+**Decision rule — pick one tool per operation:**
+
+| What you need | Use |
+|---|---|
+| `git`, `gh`, `npm`, `node`, `docker` | `Bash` tool (POSIX shell, same commands on any OS) |
+| File ops: search, read, edit, write | Dedicated tools (`Grep`, `Read`, `Edit`, `Write`, `Glob`) — never `Bash` or `PowerShell` |
+| Windows-only tasks (registry, COM, etc.) | `PowerShell` tool |
+| Everything else | `Bash` tool first; fall back to `PowerShell` only if Bash fails |
+
+Do **not** mix shells in a single logical operation (e.g., `cd` in Bash then use the new directory in PowerShell).
+
+**PowerShell 5.1 specifics** (apply only when you use the `PowerShell` tool):
+- Pipeline chain operators `&&` and `||` do **not** exist — use `; if ($?) { ... }` instead.
+- `&&` in a Bash tool call works fine because Bash handles it.
+- `gh pr create --body` does not accept a PowerShell variable containing backtick characters — write the body to a temp file and use `--body-file <path>`, then delete the file.

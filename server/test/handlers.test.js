@@ -470,6 +470,107 @@ describe('handlers', () => {
     });
   });
 
+  describe('start_timer', () => {
+    it('errors when called by a non-facilitator', async () => {
+      const room = createRoom('planning-poker', null);
+      const facilitator = mockWs('f1');
+      const other = mockWs('p2');
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(other, room, { type: 'join', name: 'Bob' });
+      await handleMessage(other, room, { type: 'start_timer', seconds: 30 });
+      assert.ok(other.messages.some(m => m.type === 'error'));
+      assert.equal(room.timer.endsAt, null);
+    });
+
+    it('errors in non-planning-poker rooms', async () => {
+      const room = createRoom('bucket', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'start_timer', seconds: 30 });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+    });
+
+    it('errors when duration is out of range', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'start_timer', seconds: 4 });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+      ws.messages.length = 0;
+      await handleMessage(ws, room, { type: 'start_timer', seconds: 301 });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+    });
+
+    it('errors when seconds is not an integer', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'start_timer', seconds: 30.5 });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+    });
+
+    it('facilitator can start a valid timer', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      const before = Date.now();
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'start_timer', seconds: 60 });
+      assert.ok(!ws.messages.some(m => m.type === 'error'));
+      assert.ok(room.timer.endsAt >= before + 60000);
+      assert.equal(room.timer.durationSeconds, 60);
+    });
+  });
+
+  describe('cancel_timer', () => {
+    it('errors when called by a non-facilitator', async () => {
+      const room = createRoom('planning-poker', null);
+      const facilitator = mockWs('f1');
+      const other = mockWs('p2');
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(other, room, { type: 'join', name: 'Bob' });
+      await handleMessage(facilitator, room, { type: 'start_timer', seconds: 60 });
+      const endsAt = room.timer.endsAt;
+      await handleMessage(other, room, { type: 'cancel_timer' });
+      assert.ok(other.messages.some(m => m.type === 'error'));
+      assert.equal(room.timer.endsAt, endsAt);
+    });
+
+    it('facilitator can cancel an active timer', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'start_timer', seconds: 60 });
+      await handleMessage(ws, room, { type: 'cancel_timer' });
+      assert.equal(room.timer.endsAt, null);
+      assert.equal(room.timer.durationSeconds, null);
+    });
+  });
+
+  describe('reveal (timer cleared)', () => {
+    it('clears the timer when reveal is called', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'start_timer', seconds: 60 });
+      assert.ok(room.timer.endsAt !== null);
+      await handleMessage(ws, room, { type: 'reveal' });
+      assert.equal(room.timer.endsAt, null);
+      assert.equal(room.revealed, true);
+    });
+  });
+
+  describe('reset (timer cleared)', () => {
+    it('clears the timer when reset is called', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'start_timer', seconds: 60 });
+      await handleMessage(ws, room, { type: 'reveal' });
+      await handleMessage(ws, room, { type: 'reset' });
+      assert.equal(room.timer.endsAt, null);
+    });
+  });
+
   describe('unknown message type', () => {
     it('errors on unrecognised type', async () => {
       const room = createRoom('planning-poker', null);
