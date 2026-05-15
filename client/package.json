@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@stryker-mutator/core": "^9.6.1",
@@ -16,6 +17,7 @@
     "@testing-library/svelte": "^5.3.1",
     "@vitest/browser": "^4.1.6",
     "@vitest/browser-playwright": "^4.1.6",
+    "@vitest/coverage-v8": "^4.1.6",
     "esbuild": "^0.28.0",
     "jsdom": "^29.1.1",
     "playwright": "^1.60.0",

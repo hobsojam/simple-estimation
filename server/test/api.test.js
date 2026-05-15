@@ -45,4 +45,38 @@ describe('POST /api/rooms', () => {
     assert.ok(!('pin' in res.body));
     assert.ok(!('pinHash' in res.body));
   });
+
+  it('accepts an optional name', async () => {
+    const res = await request(app)
+      .post('/api/rooms')
+      .send({ type: 'planning-poker', name: 'Sprint 42' });
+    assert.equal(res.status, 200);
+    assert.ok(res.body.id);
+  });
+
+  it('trims and truncates name to 200 chars', async () => {
+    const longName = 'a'.repeat(250);
+    const res = await request(app)
+      .post('/api/rooms')
+      .send({ type: 'planning-poker', name: '  ' + longName + '  ' });
+    assert.equal(res.status, 200);
+  });
+});
+
+describe('GET /api/rooms', () => {
+  it('includes name in room listing', async () => {
+    await request(app).post('/api/rooms').send({ type: 'planning-poker', name: 'My Room' });
+    const res = await request(app).get('/api/rooms');
+    assert.equal(res.status, 200);
+    const room = res.body.find(r => r.name === 'My Room');
+    assert.ok(room, 'room with name "My Room" should appear in listing');
+  });
+
+  it('includes name as null for rooms created without a name', async () => {
+    await request(app).post('/api/rooms').send({ type: 'bucket' });
+    const res = await request(app).get('/api/rooms');
+    assert.equal(res.status, 200);
+    const unnamed = res.body.find(r => r.name === null);
+    assert.ok(unnamed, 'at least one unnamed room should appear in listing');
+  });
 });

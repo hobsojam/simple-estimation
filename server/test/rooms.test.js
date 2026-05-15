@@ -12,6 +12,7 @@ describe('rooms', () => {
     it('returns the correct shape', () => {
       const room = createRoom('planning-poker', null);
       assert.equal(room.type, 'planning-poker');
+      assert.equal(room.name, null);
       assert.equal(room.facilitatorId, null);
       assert.equal(room.pinHash, null);
       assert.deepEqual(room.participants, []);
@@ -23,6 +24,16 @@ describe('rooms', () => {
     it('stores pinHash when provided', () => {
       const room = createRoom('bucket', 'hash');
       assert.equal(room.pinHash, 'hash');
+    });
+
+    it('stores name when provided', () => {
+      const room = createRoom('planning-poker', null, 'Sprint 42');
+      assert.equal(room.name, 'Sprint 42');
+    });
+
+    it('sets name to null when not provided', () => {
+      const room = createRoom('planning-poker', null);
+      assert.equal(room.name, null);
     });
   });
 

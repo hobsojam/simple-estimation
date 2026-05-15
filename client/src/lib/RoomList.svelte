@@ -149,7 +149,10 @@
         <li class="room-row" data-room-id={room.id}>
           <div class="room-main">
             <div class="room-info">
-              <span class="room-type">{ROOM_TYPE_LABELS[room.type] ?? room.type}</span>
+              <span class="room-primary">{room.name ?? ROOM_TYPE_LABELS[room.type] ?? room.type}</span>
+              {#if room.name}
+                <span class="room-type">{ROOM_TYPE_LABELS[room.type] ?? room.type}</span>
+              {/if}
               <span class="room-id">{room.id.slice(0, 8)}</span>
               <span class="participant-count">{room.participantCount} participant{room.participantCount === 1 ? '' : 's'}</span>
               {#if room.pinProtected}
@@ -301,10 +304,15 @@
     min-width: 0;
   }
 
-  .room-type {
+  .room-primary {
     font-weight: 600;
     font-size: 0.95rem;
     color: #1e293b;
+  }
+
+  .room-type {
+    font-size: 0.85rem;
+    color: #4b5563;
   }
 
   .room-id {

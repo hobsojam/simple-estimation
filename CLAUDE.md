@@ -167,3 +167,7 @@ If this becomes a persistent problem (more deps with platform-specific optional 
   Co-Authored-By: Claude Code <noreply@anthropic.com>
   ```
 - Never force-push to `main`
+
+## PowerShell notes (Windows)
+
+The shell is PowerShell 5.1. Here-string syntax (`@'...'@`) works for commit messages passed to `git commit -m`, but `gh pr create --body` does not accept a PowerShell variable when the value contains backtick characters — the shell interprets them as escape sequences before `gh` sees them. Always use `--body-file <path>` for PR bodies: write the markdown to a temp file, pass the path, then delete the file.

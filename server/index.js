@@ -41,13 +41,14 @@ const staticFallbackLimiter = rateLimit({
 app.use('/api', apiLimiter);
 
 app.post('/api/rooms', createRoomLimiter, async (req, res) => {
-  const { type, pin } = req.body;
+  const { type, pin, name } = req.body;
   const validTypes = ['planning-poker', 'bucket', 'relative'];
   if (!type || !validTypes.includes(type)) {
     return res.status(400).json({ error: 'Invalid room type' });
   }
+  const trimmedName = name ? String(name).trim().slice(0, 200) : null;
   const pinHash = pin ? await bcrypt.hash(String(pin), 10) : null;
-  const room = createRoom(type, pinHash);
+  const room = createRoom(type, pinHash, trimmedName || null);
   res.json({ id: room.id });
 });
 
@@ -56,6 +57,7 @@ app.get('/api/rooms', (req, res) => {
   res.json(rooms.map(room => ({
     id: room.id,
     type: room.type,
+    name: room.name,
     participantCount: room.participants.length,
     pinProtected: room.pinHash !== null,
   })));

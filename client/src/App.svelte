@@ -41,12 +41,13 @@
     disconnect();
   });
 
-  async function handleCreate({ name, roomType, pin }) {
+  async function handleCreate({ name, roomType, pin, roomName }) {
     createError = null;
     let roomId;
     try {
       const body = { type: roomType };
       if (pin) body.pin = pin;
+      if (roomName) body.name = roomName;
       const res = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -120,7 +121,7 @@
   $: roomType = $roomState?.type;
 
   $: pageTitle = page === 'room' && $roomState
-    ? `Room · Simple Estimation`
+    ? `${$roomState.name ?? 'Room'} · Simple Estimation`
     : 'Simple Estimation';
 </script>
 
@@ -160,6 +161,9 @@
     <div class="room-wrapper">
       <nav class="top-bar">
         <button class="leave-btn" on:click={handleLeave}>Leave Room</button>
+        {#if $roomState?.name}
+          <span class="room-name">{$roomState.name}</span>
+        {/if}
         {#if $wsError}
           <span class="ws-error" role="alert">{$wsError}</span>
         {/if}
@@ -300,6 +304,12 @@
 
   .leave-btn:hover {
     background: #f9fafb;
+  }
+
+  .room-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1e293b;
   }
 
   .ws-error {
