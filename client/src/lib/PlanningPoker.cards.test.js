@@ -1,18 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
-import { writable, readable } from 'svelte/store';
 import PlanningPoker from './PlanningPoker.svelte';
+import { roomState, send } from '../ws.js';
 
-const mockSend = vi.fn();
-const mockRoomState = writable(null);
-const mockWsError = writable(null);
-
-vi.mock('../ws.js', () => ({
-  roomState: mockRoomState,
-  wsError: mockWsError,
-  myId: readable('user-1'),
-  send: mockSend,
-}));
+vi.mock('../ws.js', async () => {
+  const { writable, readable } = await import('svelte/store');
+  return {
+    roomState: writable(null),
+    wsError: writable(null),
+    myId: readable('user-1'),
+    send: vi.fn(),
+  };
+});
 
 const baseState = {
   id: 'room-1',
@@ -25,12 +24,12 @@ const baseState = {
 
 describe('voting card buttons', () => {
   beforeEach(() => {
-    mockRoomState.set(null);
-    mockSend.mockClear();
+    roomState.set(null);
+    send.mockClear();
   });
 
   it('cards are enabled when revealed is false and there are no items', () => {
-    mockRoomState.set({ ...baseState, items: [] });
+    roomState.set({ ...baseState, items: [] });
     const { container } = render(PlanningPoker);
     const cards = container.querySelectorAll('button.card');
     expect(cards.length).toBeGreaterThan(0);
@@ -40,7 +39,7 @@ describe('voting card buttons', () => {
   });
 
   it('cards are enabled when revealed is false and items exist but none is active', () => {
-    mockRoomState.set({
+    roomState.set({
       ...baseState,
       items: [
         { id: 'i1', label: 'Story A', status: 'pending', estimate: null },
@@ -56,7 +55,7 @@ describe('voting card buttons', () => {
   });
 
   it('cards are enabled when revealed is false and there is an active item', () => {
-    mockRoomState.set({
+    roomState.set({
       ...baseState,
       items: [
         { id: 'i1', label: 'Story A', status: 'active', estimate: null },
@@ -71,7 +70,7 @@ describe('voting card buttons', () => {
   });
 
   it('cards are disabled when revealed is true', () => {
-    mockRoomState.set({
+    roomState.set({
       ...baseState,
       revealed: true,
       participants: [{ id: 'user-1', name: 'Alice', voted: true, vote: '5' }],
