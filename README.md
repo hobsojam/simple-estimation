@@ -11,11 +11,15 @@ A lightweight, self-hosted web tool for agile estimation. Supports Planning Poke
 ## Features
 
 ### Planning Poker
-- Facilitator creates a room and shares a link
+- Facilitator creates a room (with an optional name) and shares a link
 - Participants join with a display name
 - Each participant selects a Fibonacci card (1, 2, 3, 5, 8, 13, 21, ?, ∞, ☕)
 - Cards stay hidden until the facilitator reveals them
-- Facilitator can reset the round for the next story
+- **Backlog**: facilitator adds named stories to a queue; one item is active at a time
+- After reveal, the facilitator accepts the majority vote (or picks a custom value) to finalise the item
+- Finalised items appear in a Done history with their agreed estimate
+- **CSV export**: download a two-column spreadsheet (`Item, Estimate`) for all done items
+- Facilitator can reset the round for re-voting on the same story
 
 ### Magic Estimation — Bucket Mode
 - Facilitator creates a set of items (user stories, tasks)
@@ -73,7 +77,10 @@ All messages are JSON. Direction noted as C→S (client to server) or S→C (ser
 | `join` | C→S | Join a room with a display name and optional pin |
 | `claim_facilitator` | C→S | Claim facilitator role using the room pin |
 | `vote` | C→S | Cast a vote (Planning Poker) |
-| `add_item` | C→S | Facilitator adds an item (Magic Estimation) |
+| `add_item` | C→S | Facilitator adds a named item to the backlog |
+| `select_item` | C→S | Facilitator sets a backlog item active; resets current votes (Planning Poker) |
+| `finalise_item` | C→S | Facilitator records the agreed estimate for the active item (Planning Poker) |
+| `remove_item` | C→S | Facilitator removes a pending item from the backlog (Planning Poker) |
 | `move_item` | C→S | Move an item to a bucket or position (Magic Estimation) |
 | `reveal` | C→S | Facilitator reveals all votes |
 | `reset` | C→S | Facilitator resets the round |
@@ -88,11 +95,17 @@ The `state` message sent to clients contains the sanitized room (pin hash is nev
 {
   id: string,
   type: 'planning-poker' | 'bucket' | 'relative',
+  name: string | null,
   facilitatorId: string | null,
   revealed: boolean,
   participants: [{ id, name, voted: boolean, vote: string | null }],
   // vote is null until revealed; voted indicates whether a card was placed
-  items: [{ id, label, position }],  // magic estimation only
+
+  // Planning Poker items (status-based backlog):
+  items: [{ id, label, status: 'pending' | 'active' | 'done', estimate: string | null }],
+
+  // Magic Estimation items (position-based):
+  // items: [{ id, label, position: string | null }],
 }
 ```
 
@@ -118,6 +131,7 @@ simple-estimation/
             ├── JoinForm.svelte
             ├── RoomList.svelte
             ├── PlanningPoker.svelte
+            ├── poker-utils.js        # getMajorityVote, buildCSV (shared helpers)
             ├── BucketEstimation.svelte
             ├── RelativeEstimation.svelte
             └── Card.svelte
