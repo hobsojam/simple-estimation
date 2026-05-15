@@ -92,6 +92,9 @@ All messages are JSON. Inbound (client → server):
 | `add_item` | `{ label }` | Facilitator only |
 | `reveal` | — | Facilitator only |
 | `reset` | — | Facilitator only |
+| `select_item` | `{ itemId }` | Planning Poker only; facilitator only. Sets item `active`, clears votes |
+| `finalise_item` | `{ itemId, estimate }` | Planning Poker only; facilitator only. Estimate must be a valid vote value |
+| `remove_item` | `{ itemId }` | Planning Poker only; facilitator only. Only `pending` items can be removed |
 
 Outbound (server → client):
 

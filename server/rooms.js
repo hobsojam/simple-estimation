@@ -85,6 +85,34 @@ function resetRound(roomId) {
   }
 }
 
+function selectItem(roomId, itemId) {
+  const room = rooms.get(roomId);
+  if (!room) return;
+  for (const item of room.items) {
+    if (item.status === 'active') item.status = 'pending';
+  }
+  const item = room.items.find(i => i.id === itemId);
+  if (item) item.status = 'active';
+  for (const p of room.participants) p.vote = null;
+  room.revealed = false;
+}
+
+function finaliseItem(roomId, itemId, estimate) {
+  const room = rooms.get(roomId);
+  if (!room) return;
+  const item = room.items.find(i => i.id === itemId);
+  if (item) {
+    item.status = 'done';
+    item.estimate = estimate;
+  }
+}
+
+function removeItem(roomId, itemId) {
+  const room = rooms.get(roomId);
+  if (!room) return;
+  room.items = room.items.filter(i => i.id !== itemId);
+}
+
 function deleteRoom(roomId) {
   rooms.delete(roomId);
 }
@@ -103,6 +131,9 @@ module.exports = {
   castVote,
   moveItem,
   addItem,
+  selectItem,
+  finaliseItem,
+  removeItem,
   revealVotes,
   resetRound,
   deleteRoom,
