@@ -196,7 +196,7 @@
         {:else}
           <div class="waiting">
             <p>Waiting for votes…</p>
-            <p class="hint" aria-live="polite" aria-atomic="true">{state.participants.filter(p => p.vote !== null).length} of {state.participants.length} voted</p>
+            <p class="hint" aria-live="polite" aria-atomic="true">{state.participants.filter(p => p.voted).length} of {state.participants.length} voted</p>
           </div>
         {/if}
 
