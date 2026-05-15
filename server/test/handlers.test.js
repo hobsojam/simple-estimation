@@ -229,6 +229,247 @@ describe('handlers', () => {
     });
   });
 
+  describe('select_item', () => {
+    it('errors when called by a non-facilitator', async () => {
+      const room = createRoom('planning-poker', null);
+      const facilitator = mockWs('f1');
+      const other = mockWs('p2');
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(other, room, { type: 'join', name: 'Bob' });
+      await handleMessage(facilitator, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(other, room, { type: 'select_item', itemId: room.items[0].id });
+      assert.ok(other.messages.some(m => m.type === 'error'));
+      assert.equal(room.items[0].status, 'pending');
+    });
+
+    it('errors when itemId is missing', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'select_item' });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+    });
+
+    it('errors when item is not found', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'select_item', itemId: 'no-such-id' });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+    });
+
+    it('errors when selecting a done item', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      room.items[0].status = 'done';
+      await handleMessage(ws, room, { type: 'select_item', itemId: room.items[0].id });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+    });
+
+    it('facilitator can select a pending item', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'select_item', itemId: room.items[0].id });
+      assert.equal(room.items[0].status, 'active');
+    });
+
+    it('selecting resets votes and revealed', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story B' });
+      await handleMessage(ws, room, { type: 'select_item', itemId: room.items[0].id });
+      await handleMessage(ws, room, { type: 'vote', vote: '5' });
+      await handleMessage(ws, room, { type: 'reveal' });
+      assert.equal(room.revealed, true);
+      await handleMessage(ws, room, { type: 'select_item', itemId: room.items[1].id });
+      assert.equal(room.revealed, false);
+      assert.equal(room.participants[0].vote, null);
+    });
+
+    it('only one item is active at a time', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story B' });
+      await handleMessage(ws, room, { type: 'select_item', itemId: room.items[0].id });
+      await handleMessage(ws, room, { type: 'select_item', itemId: room.items[1].id });
+      assert.equal(room.items.filter(i => i.status === 'active').length, 1);
+      assert.equal(room.items[1].status, 'active');
+      assert.equal(room.items[0].status, 'pending');
+    });
+  });
+
+  describe('finalise_item', () => {
+    it('errors when called by a non-facilitator', async () => {
+      const room = createRoom('planning-poker', null);
+      const facilitator = mockWs('f1');
+      const other = mockWs('p2');
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(other, room, { type: 'join', name: 'Bob' });
+      await handleMessage(facilitator, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(facilitator, room, { type: 'select_item', itemId: room.items[0].id });
+      await handleMessage(other, room, { type: 'finalise_item', itemId: room.items[0].id, estimate: '5' });
+      assert.ok(other.messages.some(m => m.type === 'error'));
+      assert.equal(room.items[0].status, 'active');
+    });
+
+    it('errors when itemId is missing', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'finalise_item', estimate: '5' });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+    });
+
+    it('errors when estimate is missing', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'select_item', itemId: room.items[0].id });
+      await handleMessage(ws, room, { type: 'finalise_item', itemId: room.items[0].id });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+    });
+
+    it('errors when estimate is not a valid vote value', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'select_item', itemId: room.items[0].id });
+      await handleMessage(ws, room, { type: 'finalise_item', itemId: room.items[0].id, estimate: '99' });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+      assert.equal(room.items[0].status, 'active');
+    });
+
+    it('errors when item is not found', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'finalise_item', itemId: 'no-such-id', estimate: '5' });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+    });
+
+    it('errors when item is not active', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'finalise_item', itemId: room.items[0].id, estimate: '5' });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+    });
+
+    it('facilitator can finalise the active item', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'select_item', itemId: room.items[0].id });
+      await handleMessage(ws, room, { type: 'finalise_item', itemId: room.items[0].id, estimate: '8' });
+      assert.equal(room.items[0].status, 'done');
+      assert.equal(room.items[0].estimate, '8');
+    });
+
+    it('accepts all valid vote values as estimate', async () => {
+      const valid = ['1', '2', '3', '5', '8', '13', '21', '?', '∞', '☕'];
+      for (const v of valid) {
+        clearRooms();
+        const room = createRoom('planning-poker', null);
+        const ws = mockWs('f1');
+        await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+        await handleMessage(ws, room, { type: 'add_item', label: 'Story' });
+        await handleMessage(ws, room, { type: 'select_item', itemId: room.items[0].id });
+        ws.messages.length = 0;
+        await handleMessage(ws, room, { type: 'finalise_item', itemId: room.items[0].id, estimate: v });
+        assert.ok(!ws.messages.some(m => m.type === 'error'), `"${v}" should be a valid estimate`);
+        assert.equal(room.items[0].estimate, v);
+      }
+    });
+  });
+
+  describe('remove_item', () => {
+    it('errors when called by a non-facilitator', async () => {
+      const room = createRoom('planning-poker', null);
+      const facilitator = mockWs('f1');
+      const other = mockWs('p2');
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(other, room, { type: 'join', name: 'Bob' });
+      await handleMessage(facilitator, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(other, room, { type: 'remove_item', itemId: room.items[0].id });
+      assert.ok(other.messages.some(m => m.type === 'error'));
+      assert.equal(room.items.length, 1);
+    });
+
+    it('errors when itemId is missing', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'remove_item' });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+    });
+
+    it('errors when item is not found', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'remove_item', itemId: 'no-such-id' });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+    });
+
+    it('errors when removing a done item', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'select_item', itemId: room.items[0].id });
+      await handleMessage(ws, room, { type: 'finalise_item', itemId: room.items[0].id, estimate: '5' });
+      ws.messages.length = 0;
+      await handleMessage(ws, room, { type: 'remove_item', itemId: room.items[0].id });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+      assert.equal(room.items.length, 1);
+    });
+
+    it('errors when removing an active item', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'select_item', itemId: room.items[0].id });
+      ws.messages.length = 0;
+      await handleMessage(ws, room, { type: 'remove_item', itemId: room.items[0].id });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+      assert.equal(room.items.length, 1);
+    });
+
+    it('facilitator can remove a pending item', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'remove_item', itemId: room.items[0].id });
+      assert.equal(room.items.length, 0);
+    });
+  });
+
+  describe('add_item (planning-poker shape)', () => {
+    it('creates item with status and estimate fields for planning-poker rooms', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      assert.equal(room.items[0].status, 'pending');
+      assert.equal(room.items[0].estimate, null);
+      assert.equal(room.items[0].position, undefined);
+    });
+  });
+
   describe('unknown message type', () => {
     it('errors on unrecognised type', async () => {
       const room = createRoom('planning-poker', null);
