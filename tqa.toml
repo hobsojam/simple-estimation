@@ -1,0 +1,7 @@
+[components.server]
+lcov    = "reports/server/lcov.info"
+stryker = "reports/server/mutation.json"
+
+[components.client]
+stryker = "reports/client/mutation.json"
+lcov    = "reports/client/lcov.info"

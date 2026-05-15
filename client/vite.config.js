@@ -7,6 +7,13 @@ export default defineConfig({
   test: {
     globals: true,
     setupFiles: ['src/test/setup.js'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['lcov'],
+      reportsDirectory: 'reports/coverage',
+      include: ['src/**'],
+      exclude: ['src/test/**'],
+    },
     browser: {
       enabled: true,
       provider: playwright({ headless: true }),
