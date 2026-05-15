@@ -79,3 +79,54 @@ describe('Reveal Votes button', () => {
     expect(getByRole('button', { name: 'Reveal Votes' })).toBeEnabled();
   });
 });
+
+const revealedWithActiveItem = {
+  id: 'room-1',
+  type: 'planning-poker',
+  facilitatorId: 'user-1',
+  revealed: true,
+  participants: [{ id: 'user-1', name: 'Alice', voted: true, vote: '5' }],
+  items: [{ id: 'i1', label: 'Story A', status: 'active', estimate: null }],
+};
+
+describe('finalise section', () => {
+  beforeEach(() => {
+    roomState.set(null);
+    send.mockClear();
+  });
+
+  it('is not shown when round is not yet revealed (even with active item and facilitator)', () => {
+    roomState.set({ ...revealedWithActiveItem, revealed: false });
+    const { container } = render(PlanningPoker);
+    expect(container.querySelector('.finalise-section')).toBeNull();
+  });
+
+  it('is not shown when revealed but no item is active', () => {
+    roomState.set({
+      ...revealedWithActiveItem,
+      items: [{ id: 'i1', label: 'Story A', status: 'pending', estimate: null }],
+    });
+    const { container } = render(PlanningPoker);
+    expect(container.querySelector('.finalise-section')).toBeNull();
+  });
+
+  it('is not shown when revealed and active item exists but current user is not the facilitator', () => {
+    roomState.set({ ...revealedWithActiveItem, facilitatorId: 'someone-else' });
+    const { container } = render(PlanningPoker);
+    expect(container.querySelector('.finalise-section')).toBeNull();
+  });
+
+  it('is shown when revealed, active item exists, and current user is the facilitator', () => {
+    roomState.set(revealedWithActiveItem);
+    const { container } = render(PlanningPoker);
+    const section = container.querySelector('.finalise-section');
+    expect(section).not.toBeNull();
+    expect(section.textContent).toContain('Story A');
+  });
+
+  it('Finalise button is disabled until an estimate value is selected', () => {
+    roomState.set(revealedWithActiveItem);
+    const { getByRole } = render(PlanningPoker);
+    expect(getByRole('button', { name: 'Finalise' })).toBeDisabled();
+  });
+});
