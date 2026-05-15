@@ -14,7 +14,7 @@
 
   $: state = $roomState;
   $: isFacilitator = state && $myId && state.facilitatorId === $myId;
-  $: hasVotes = state && state.participants.some(p => p.vote !== null);
+  $: hasVotes = state && state.participants.some(p => p.voted);
   $: activeItem = state ? (state.items.find(i => i.status === 'active') ?? null) : null;
   $: pendingItems = state ? state.items.filter(i => i.status === 'pending') : [];
   $: doneItems = state ? state.items.filter(i => i.status === 'done') : [];
@@ -223,7 +223,7 @@
               <Card
                 value={card}
                 selected={selectedCard === card}
-                disabled={state.revealed || !activeItem}
+                disabled={state.revealed}
                 onselect={() => castVote(card)}
               />
             {/each}
@@ -235,7 +235,7 @@
 
         {#if isFacilitator}
           <div class="facilitator-controls">
-            <button class="primary" on:click={reveal} disabled={!hasVotes || state.revealed || !activeItem}>
+            <button class="primary" on:click={reveal} disabled={!hasVotes || state.revealed}>
               Reveal Votes
             </button>
             <button class="secondary" on:click={reset} disabled={!state.revealed}>
