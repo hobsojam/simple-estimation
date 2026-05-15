@@ -124,9 +124,9 @@ describe('finalise section', () => {
     expect(section.textContent).toContain('Story A');
   });
 
-  it('Finalise button is disabled until an estimate value is selected', () => {
+  it('Finalise button is enabled when majority vote auto-fills the estimate', () => {
     roomState.set(revealedWithActiveItem);
     const { getByRole } = render(PlanningPoker);
-    expect(getByRole('button', { name: 'Finalise' })).toBeDisabled();
+    expect(getByRole('button', { name: 'Finalise' })).toBeEnabled();
   });
 });
