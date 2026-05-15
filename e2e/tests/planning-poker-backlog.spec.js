@@ -136,8 +136,8 @@ test('backlog state syncs to second participant in real time', async ({ page, co
 
   // Alice reveals votes — both see the result
   await page.getByRole('button', { name: 'Reveal Votes' }).click();
-  await expect(page.locator('.vote-value', { hasText: '5' })).toBeVisible();
-  await expect(bobPage.locator('.vote-value', { hasText: '5' })).toBeVisible();
+  await expect(page.locator('.vote-value', { hasText: '5' }).first()).toBeVisible();
+  await expect(bobPage.locator('.vote-value', { hasText: '5' }).first()).toBeVisible();
 
   // Alice finalises with estimate 5
   await expect(page.locator('.finalise-section')).toBeVisible();
