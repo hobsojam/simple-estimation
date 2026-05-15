@@ -6,6 +6,9 @@ const {
   castVote,
   moveItem,
   addItem,
+  selectItem,
+  finaliseItem,
+  removeItem,
   revealVotes,
   resetRound,
 } = require('./rooms');
@@ -87,7 +90,43 @@ async function handleMessage(ws, room, data) {
       if (data.label.trim().length > 200) {
         return sendError(ws, 'Item label must be 200 characters or fewer');
       }
-      addItem(room.id, { id: uuidv4(), label: data.label.trim(), position: null });
+      const newItem = room.type === 'planning-poker'
+        ? { id: uuidv4(), label: data.label.trim(), status: 'pending', estimate: null }
+        : { id: uuidv4(), label: data.label.trim(), position: null };
+      addItem(room.id, newItem);
+      break;
+    }
+
+    case 'select_item': {
+      if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can select items');
+      if (!data.itemId) return sendError(ws, 'itemId required');
+      const selectTarget = room.items.find(i => i.id === data.itemId);
+      if (!selectTarget) return sendError(ws, 'Item not found');
+      if (selectTarget.status === 'done') return sendError(ws, 'Cannot select a done item');
+      selectItem(room.id, data.itemId);
+      break;
+    }
+
+    case 'finalise_item': {
+      if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can finalise items');
+      if (!data.itemId) return sendError(ws, 'itemId required');
+      if (data.estimate === undefined || data.estimate === null) return sendError(ws, 'estimate required');
+      const estimateStr = String(data.estimate);
+      if (!VALID_VOTES.has(estimateStr)) return sendError(ws, `Invalid estimate value: ${estimateStr}`);
+      const finaliseTarget = room.items.find(i => i.id === data.itemId);
+      if (!finaliseTarget) return sendError(ws, 'Item not found');
+      if (finaliseTarget.status !== 'active') return sendError(ws, 'Only the active item can be finalised');
+      finaliseItem(room.id, data.itemId, estimateStr);
+      break;
+    }
+
+    case 'remove_item': {
+      if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can remove items');
+      if (!data.itemId) return sendError(ws, 'itemId required');
+      const removeTarget = room.items.find(i => i.id === data.itemId);
+      if (!removeTarget) return sendError(ws, 'Item not found');
+      if (removeTarget.status !== 'pending') return sendError(ws, 'Only pending items can be removed');
+      removeItem(room.id, data.itemId);
       break;
     }
 
