@@ -1,6 +1,7 @@
 <script>
   import { roomState, send, wsError, myId } from '../ws.js';
   import Card from './Card.svelte';
+  import { getMajorityVote, buildCSV } from './poker-utils.js';
 
   const CARDS = ['1', '2', '3', '5', '8', '13', '21', '?', '∞', '☕'];
 
@@ -78,11 +79,7 @@
   }
 
   function downloadCSV() {
-    const rows = ['Item,Estimate'];
-    for (const item of doneItems) {
-      rows.push(`"${item.label.replace(/"/g, '""')}",${item.estimate}`);
-    }
-    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const blob = new Blob([buildCSV(doneItems)], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -91,19 +88,6 @@
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }
-
-  function getMajorityVote(participants) {
-    const counts = {};
-    for (const p of participants) {
-      if (p.vote) counts[p.vote] = (counts[p.vote] || 0) + 1;
-    }
-    let max = 0;
-    let majority = null;
-    for (const [vote, count] of Object.entries(counts)) {
-      if (count > max) { max = count; majority = vote; }
-    }
-    return majority;
   }
 </script>
 
