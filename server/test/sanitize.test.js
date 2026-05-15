@@ -5,6 +5,7 @@ const { sanitizeRoom } = require('../sanitize');
 const baseRoom = {
   id: 'room-1',
   type: 'planning-poker',
+  name: 'Sprint 42',
   facilitatorId: 'p1',
   pinHash: '$2b$10$somehashvalue',
   revealed: false,
@@ -38,8 +39,14 @@ describe('sanitizeRoom', () => {
     const result = sanitizeRoom(baseRoom);
     assert.equal(result.id, 'room-1');
     assert.equal(result.type, 'planning-poker');
+    assert.equal(result.name, 'Sprint 42');
     assert.equal(result.facilitatorId, 'p1');
     assert.equal(result.revealed, false);
+  });
+
+  it('includes name when null', () => {
+    const result = sanitizeRoom({ ...baseRoom, name: null });
+    assert.equal(result.name, null);
   });
 
   it('includes items unchanged', () => {

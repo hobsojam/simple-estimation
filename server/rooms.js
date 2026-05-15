@@ -2,10 +2,11 @@ const { v4: uuidv4 } = require('uuid');
 
 const rooms = new Map();
 
-function createRoom(type, pinHash) {
+function createRoom(type, pinHash, name) {
   const room = {
     id: uuidv4(),
     type,
+    name: name || null,
     facilitatorId: null,
     pinHash: pinHash || null,
     participants: [],

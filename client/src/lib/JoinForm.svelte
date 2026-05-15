@@ -8,13 +8,14 @@
   let name = $state('');
   let pin = $state('');
   let roomType = $state('planning-poker');
+  let roomName = $state('');
 
   let tabJoin = $state(null);
   let tabCreate = $state(null);
 
   function handleCreate() {
     if (!name.trim()) return;
-    oncreate?.({ name: name.trim(), roomType, pin: pin.trim() || undefined });
+    oncreate?.({ name: name.trim(), roomType, pin: pin.trim() || undefined, roomName: roomName.trim() || undefined });
   }
 
   function handleJoin() {
@@ -100,6 +101,10 @@
           <option value="bucket">Bucket Estimation</option>
           <option value="relative">Relative Estimation</option>
         </select>
+      </label>
+      <label>
+        Room name (optional)
+        <input type="text" bind:value={roomName} placeholder="e.g. Sprint 42 Planning" maxlength="200" />
       </label>
       <label>
         Facilitator PIN (optional)

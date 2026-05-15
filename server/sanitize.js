@@ -2,6 +2,7 @@ function sanitizeRoom(room) {
   return {
     id: room.id,
     type: room.type,
+    name: room.name,
     facilitatorId: room.facilitatorId,
     revealed: room.revealed,
     participants: room.participants.map(p => ({

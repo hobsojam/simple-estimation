@@ -106,5 +106,24 @@ describe('JoinForm', () => {
       await fireEvent.click(getByRole('button', { name: 'Create Room' }));
       expect(handler.mock.calls[0][0].pin).toBe('secret');
     });
+
+    it('includes roomName in oncreate when room name field is filled', async () => {
+      const handler = vi.fn();
+      const { getByRole, getByPlaceholderText } = render(JoinForm, { oncreate: handler });
+      await fireEvent.click(getByRole('tab', { name: 'Create Room' }));
+      await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Bob' } });
+      await fireEvent.input(getByPlaceholderText('e.g. Sprint 42 Planning'), { target: { value: 'Sprint 42' } });
+      await fireEvent.click(getByRole('button', { name: 'Create Room' }));
+      expect(handler.mock.calls[0][0].roomName).toBe('Sprint 42');
+    });
+
+    it('omits roomName from oncreate when room name field is empty', async () => {
+      const handler = vi.fn();
+      const { getByRole, getByPlaceholderText } = render(JoinForm, { oncreate: handler });
+      await fireEvent.click(getByRole('tab', { name: 'Create Room' }));
+      await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Bob' } });
+      await fireEvent.click(getByRole('button', { name: 'Create Room' }));
+      expect(handler.mock.calls[0][0].roomName).toBeUndefined();
+    });
   });
 });
