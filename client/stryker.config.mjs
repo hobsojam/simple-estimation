@@ -10,7 +10,7 @@ export default {
   ],
   coverageAnalysis: 'perTest',
   concurrency: 1,
-  reporters: ['html', 'clear-text', 'progress'],
+  reporters: ['html', 'json', 'clear-text', 'progress'],
   htmlReporter: { fileName: 'reports/mutation/index.html' },
   timeoutMS: 15000,
 };
