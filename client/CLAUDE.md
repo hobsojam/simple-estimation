@@ -104,6 +104,14 @@ Reusable card button. Props: `value` (string), `selected` (bool), `disabled` (bo
 4. Add the type to the `validTypes` array in `server/index.js`
 5. Update the README
 
+## Mutation Testing (Stryker)
+
+Run with `npx stryker run` from `client/`. Config: `stryker.config.mjs`. The vitest config for Stryker lives in `vitest.stryker.config.js` (separate from the normal `vite.config.js`).
+
+**Windows file-locking constraint:** `concurrency` in `stryker.config.mjs` must stay at `1`. With concurrency > 1, multiple Stryker sandbox directories each start a Vite process that races to atomically rename temp files inside `.vite/vitest/deps/`. Windows file locking turns those renames into EPERM errors. `vitest.stryker.config.js` also sets `optimizeDeps.noDiscovery: true` to reduce dep-cache churn per test cycle.
+
+The separate Vitest config also swaps `@vitest/browser` (real Chromium) for `jsdom` with `resolve.conditions: ['browser']` — required so Svelte 5's `mount` resolves to the client build rather than the SSR build.
+
 ## Protocol Reminder
 
 Inbound messages (server → client) that `ws.js` handles:
