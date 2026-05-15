@@ -100,3 +100,52 @@ test('non-facilitator sees backlog but no facilitator controls', async ({ page, 
   await expect(page2.getByPlaceholder('Add item…')).not.toBeVisible();
   await expect(page2.getByRole('button', { name: 'Estimate' })).not.toBeVisible();
 });
+
+test('backlog state syncs to second participant in real time', async ({ page, context }) => {
+  // Alice creates a room (no PIN)
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Create Room' }).click();
+  await page.getByLabel('Your name').fill('Alice');
+  await page.getByRole('button', { name: 'Create Room' }).click();
+  await expect(page.getByRole('button', { name: 'Leave Room' })).toBeVisible();
+
+  const roomId = new URL(page.url()).searchParams.get('room');
+
+  // Alice adds an item to the backlog
+  await page.getByPlaceholder('Add item…').fill('User can log in');
+  await page.getByRole('button', { name: 'Add' }).click();
+  await expect(page.getByText('User can log in')).toBeVisible();
+
+  // Bob joins the same room in a second tab
+  const bobPage = await context.newPage();
+  await bobPage.goto(`/?room=${roomId}`);
+  await bobPage.getByLabel('Your name').fill('Bob');
+  await bobPage.getByRole('button', { name: 'Join' }).click();
+  await expect(bobPage.getByRole('button', { name: 'Leave Room' })).toBeVisible();
+
+  // Alice clicks Estimate — active-item banner appears on both pages
+  await page.getByRole('button', { name: 'Estimate' }).first().click();
+  await expect(page.locator('.active-banner')).toContainText('User can log in');
+  await expect(bobPage.locator('.active-banner')).toContainText('User can log in');
+
+  // Both Alice and Bob vote 5
+  await page.locator('button.card', { hasText: '5' }).click();
+  await expect(page.locator('.participant.voted')).toBeVisible();
+  await bobPage.locator('button.card', { hasText: '5' }).click();
+  await expect(bobPage.locator('.participant.voted')).toBeVisible();
+
+  // Alice reveals votes — both see the result
+  await page.getByRole('button', { name: 'Reveal Votes' }).click();
+  await expect(page.locator('.vote-value', { hasText: '5' }).first()).toBeVisible();
+  await expect(bobPage.locator('.vote-value', { hasText: '5' }).first()).toBeVisible();
+
+  // Alice finalises with estimate 5
+  await expect(page.locator('.finalise-section')).toBeVisible();
+  await expect(page.locator('.estimate-btn.selected', { hasText: '5' })).toBeVisible();
+  await page.getByRole('button', { name: 'Finalise' }).click();
+
+  // Bob's page shows the item in the Done section with estimate 5 (real-time sync)
+  await expect(bobPage.locator('.done-item')).toBeVisible();
+  await expect(bobPage.locator('.done-item .item-label')).toContainText('User can log in');
+  await expect(bobPage.locator('.done-item .estimate-badge')).toContainText('5');
+});
