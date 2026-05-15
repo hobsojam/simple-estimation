@@ -24,6 +24,49 @@ test('vote count updates and reveal button enables after facilitator votes', asy
   await expect(page.locator('.vote-value', { hasText: '5' })).toBeVisible();
 });
 
+test('backlog: add item, select, vote, finalise, verify done, download CSV', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByRole('tab', { name: 'Create Room' }).click();
+  await page.getByLabel('Your name').fill('Alice');
+  await page.getByRole('button', { name: 'Create Room' }).click();
+  await expect(page.getByRole('button', { name: 'Leave Room' })).toBeVisible();
+
+  // Add an item to the backlog
+  await page.getByLabel('New item label').fill('User login flow');
+  await page.getByRole('button', { name: 'Add' }).click();
+  await expect(page.locator('.backlog-item', { hasText: 'User login flow' })).toBeVisible();
+
+  // Select the item to start estimating
+  await page.getByRole('button', { name: 'Estimate' }).first().click();
+  await expect(page.locator('.active-banner')).toContainText('User login flow');
+  await expect(page.locator('.backlog-item.active-item', { hasText: 'User login flow' })).toBeVisible();
+
+  // Votes cleared by select_item; reveal stays disabled
+  await expect(page.getByRole('button', { name: 'Reveal Votes' })).toBeDisabled();
+
+  // Cast a vote and reveal
+  await page.locator('button.card', { hasText: '5' }).click();
+  await page.getByRole('button', { name: 'Reveal Votes' }).click();
+  await expect(page.locator('.vote-value', { hasText: '5' })).toBeVisible();
+
+  // Finalise section shows with majority pre-filled; click Finalise
+  await expect(page.locator('.finalise-section')).toBeVisible();
+  await expect(page.locator('.majority-hint')).toContainText('5');
+  await page.getByRole('button', { name: 'Finalise' }).click();
+
+  // Item moves to Done with estimate badge
+  await expect(page.locator('.backlog-item.done-item', { hasText: 'User login flow' })).toBeVisible();
+  await expect(page.locator('.estimate-badge', { hasText: '5' })).toBeVisible();
+
+  // CSV download
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.locator('.csv-btn').click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^estimation-.+\.csv$/);
+});
+
 test('vote count reflects each participant as they vote', async ({ page, context }) => {
   await page.goto('/');
 
