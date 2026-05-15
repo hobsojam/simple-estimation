@@ -10,7 +10,7 @@
 
   $: state = $roomState;
   $: isFacilitator = state && $myId && state.facilitatorId === $myId;
-  $: hasVotes = state && state.participants.some(p => p.vote !== null);
+  $: hasVotes = state && state.participants.some(p => p.voted);
 
   function castVote(card) {
     selectedCard = card;
@@ -112,7 +112,7 @@
         {:else}
           <div class="waiting">
             <p>Waiting for votes…</p>
-            <p class="hint" aria-live="polite" aria-atomic="true">{state.participants.filter(p => p.vote !== null).length} of {state.participants.length} voted</p>
+            <p class="hint" aria-live="polite" aria-atomic="true">{state.participants.filter(p => p.voted).length} of {state.participants.length} voted</p>
           </div>
         {/if}
 
