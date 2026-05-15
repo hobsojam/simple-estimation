@@ -5,6 +5,10 @@ function sanitizeRoom(room, isAuthorized = true) {
       type: room.type,
       name: room.name,
       accessRequired: true,
+      facilitatorId: null,
+      revealed: false,
+      participants: [],
+      items: [],
     };
   }
 

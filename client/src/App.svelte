@@ -98,12 +98,9 @@
 
   // Once state arrives, we are in the room. Send join message if we have pending join info.
   $: if ($roomState && !joinSent && pendingJoin?.name) {
-    console.log('[App] Reactive Join:', { accessRequired: $roomState.accessRequired, pendingAccessPin: !!pendingJoin.accessPin });
     if ($roomState.accessRequired && !pendingJoin.accessPin) {
-      console.log('[App] Transition to room-access-pin (pending join)');
       page = 'room-access-pin';
     } else {
-      console.log('[App] Sending join message');
       joinSent = true;
       const { name, pin, accessPin } = pendingJoin;
       send({
@@ -118,7 +115,6 @@
 
   // If we arrive via URL without a name (direct link), show the name prompt after connecting
   $: if ($roomState && page === 'joining' && !pendingJoin?.name) {
-    console.log('[App] Direct link state arrived:', { accessRequired: $roomState.accessRequired });
     if ($roomState.accessRequired) {
       page = 'room-access-pin';
     } else {
@@ -131,7 +127,6 @@
   let directAccessPin = '';
 
   function handleDirectJoin() {
-    console.log('[App] handleDirectJoin', { directName, directAccessPin });
     if (!directName.trim()) return;
     joinSent = true;
     send({
@@ -144,7 +139,6 @@
   }
 
   function handleAccessPinSubmit() {
-    console.log('[App] handleAccessPinSubmit', { directAccessPin });
     if ($roomState?.accessRequired && !directAccessPin.trim()) return;
     
     if (pendingJoin?.name) {
@@ -155,13 +149,12 @@
   }
 
   $: if ($wsError) {
-    console.log('[App] wsError detected:', $wsError, 'current page:', page);
     joinSent = false;
     if (page === 'room' && $roomState?.accessRequired) {
-      console.log('[App] Transition back to room-access-pin due to error');
+      if (pendingJoin) pendingJoin = { ...pendingJoin, accessPin: undefined };
+      directAccessPin = '';
       page = 'room-access-pin';
     } else if (page === 'room') {
-      console.log('[App] Transition back to room-enter-name due to error');
       page = 'room-enter-name';
     }
   }
