@@ -1,3 +1,5 @@
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=hobsojam_simple-estimation)](https://sonarcloud.io/summary/new_code?id=hobsojam_simple-estimation)
+
 # simple-estimation
 
 A lightweight, self-hosted web tool for agile estimation. Supports Planning Poker and two Magic Estimation variants.
