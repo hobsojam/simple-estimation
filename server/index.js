@@ -41,14 +41,15 @@ const staticFallbackLimiter = rateLimit({
 app.use('/api', apiLimiter);
 
 app.post('/api/rooms', createRoomLimiter, async (req, res) => {
-  const { type, pin, name } = req.body;
+  const { type, pin, accessPin, name } = req.body;
   const validTypes = ['planning-poker', 'bucket', 'relative'];
   if (!type || !validTypes.includes(type)) {
     return res.status(400).json({ error: 'Invalid room type' });
   }
   const trimmedName = name ? String(name).trim().slice(0, 200) : null;
   const pinHash = pin ? await bcrypt.hash(String(pin), 10) : null;
-  const room = createRoom(type, pinHash, trimmedName || null);
+  const accessPinHash = accessPin ? await bcrypt.hash(String(accessPin), 10) : null;
+  const room = createRoom(type, pinHash, trimmedName || null, accessPinHash);
   res.json({ id: room.id });
 });
 
@@ -60,6 +61,7 @@ app.get('/api/rooms', (req, res) => {
     name: room.name,
     participantCount: room.participants.length,
     pinProtected: room.pinHash !== null,
+    accessPinProtected: room.accessPinHash !== null,
   })));
 });
 
@@ -101,9 +103,9 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 function broadcastState(room, sockets) {
-  const state = JSON.stringify({ type: 'state', room: sanitizeRoom(room) });
   for (const ws of sockets) {
     if (ws.readyState === ws.OPEN) {
+      const state = JSON.stringify({ type: 'state', room: sanitizeRoom(room, ws.isAuthorized) });
       ws.send(state);
     }
   }
@@ -157,13 +159,14 @@ wss.on('connection', (ws, req) => {
 
   ws.participantId = participantId || uuidv4();
   ws.roomId = roomId;
+  ws.isAuthorized = room.accessPinHash === null;
 
   if (!roomSockets.has(roomId)) {
     roomSockets.set(roomId, new Set());
   }
   roomSockets.get(roomId).add(ws);
 
-  ws.send(JSON.stringify({ type: 'state', room: sanitizeRoom(room) }));
+  ws.send(JSON.stringify({ type: 'state', room: sanitizeRoom(room, ws.isAuthorized) }));
 
   let messageChain = Promise.resolve();
 
@@ -179,7 +182,16 @@ wss.on('connection', (ws, req) => {
     messageChain = messageChain.then(async () => {
       const currentRoom = getRoom(roomId);
       if (!currentRoom) {
+        console.log(`[WS] Room not found: ${roomId}`);
         ws.close(1008, 'Room not found');
+        return;
+      }
+
+      console.log(`[WS] Message from ${ws.participantId} in ${roomId}: ${data.type} (authorized: ${ws.isAuthorized})`);
+
+      if (!ws.isAuthorized && data.type !== 'join') {
+        console.log(`[WS] Unauthorized access attempt: ${data.type}`);
+        ws.send(JSON.stringify({ type: 'error', message: 'Access PIN required' }));
         return;
       }
 

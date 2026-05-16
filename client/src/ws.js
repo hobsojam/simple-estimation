@@ -46,6 +46,7 @@ function openConnection() {
   socket.addEventListener('message', (event) => {
     try {
       const msg = JSON.parse(event.data);
+      console.log('[WS] Received:', msg.type, msg.message || '');
       if (msg.type === 'state') {
         roomState.set(msg.room);
       } else if (msg.type === 'error') {
@@ -56,8 +57,12 @@ function openConnection() {
     }
   });
 
-  socket.addEventListener('close', () => {
+  socket.addEventListener('close', (event) => {
     if (intentionalClose) return;
+    if (event.code === 1008) {
+      wsError.set('Room not found. The link may be expired or incorrect.');
+      return;
+    }
     if (retryCount < 3) {
       const delay = Math.pow(2, retryCount) * 1000;
       retryTimeout = setTimeout(openConnection, delay);

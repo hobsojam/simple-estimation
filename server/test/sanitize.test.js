@@ -69,4 +69,17 @@ describe('sanitizeRoom', () => {
     const result = sanitizeRoom({ ...baseRoom, items: planningPokerItems });
     assert.deepEqual(result.items, planningPokerItems);
   });
+
+  it('returns safe stub when not authorized', () => {
+    const result = sanitizeRoom(baseRoom, false);
+    assert.equal(result.id, baseRoom.id);
+    assert.equal(result.type, baseRoom.type);
+    assert.equal(result.name, baseRoom.name);
+    assert.equal(result.accessRequired, true);
+    assert.equal(result.facilitatorId, null);
+    assert.equal(result.revealed, false);
+    assert.deepEqual(result.participants, []);
+    assert.deepEqual(result.items, []);
+    assert.ok(!('pinHash' in result));
+  });
 });

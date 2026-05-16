@@ -27,7 +27,12 @@
 
   function handleJoin() {
     if (!name.trim() || !roomId.trim()) return;
-    onjoin?.({ roomId: roomId.trim(), name: name.trim(), pin: pin.trim() || undefined });
+    onjoin?.({
+      roomId: roomId.trim(),
+      name: name.trim(),
+      pin: pin.trim() || undefined,
+      accessPin: accessPin.trim() || undefined
+    });
   }
 
   async function switchTab(next) {
@@ -92,6 +97,10 @@
       <label>
         Room ID
         <input type="text" bind:value={roomId} placeholder="Paste room ID" />
+      </label>
+      <label>
+        Room Access PIN (if required)
+        <input type="text" bind:value={accessPin} placeholder="Enter room access PIN" />
       </label>
       <label>
         Facilitator PIN (optional)

@@ -41,12 +41,13 @@
     disconnect();
   });
 
-  async function handleCreate({ name, roomType, pin, roomName }) {
+  async function handleCreate({ name, roomType, pin, accessPin, roomName }) {
     createError = null;
     let roomId;
     try {
       const body = { type: roomType };
       if (pin) body.pin = pin;
+      if (accessPin) body.accessPin = accessPin;
       if (roomName) body.name = roomName;
       const res = await fetch('/api/rooms', {
         method: 'POST',
@@ -66,16 +67,16 @@
     setUrlParams(roomId, roomType);
     joinSent = false;
     connect(roomId);
-    pendingJoin = { name, pin };
+    pendingJoin = { name, pin, accessPin };
     page = 'joining';
   }
 
-  function handleJoin({ roomId, name, pin }) {
+  function handleJoin({ roomId, name, pin, accessPin }) {
     setUrlParams(roomId, null);
 
     joinSent = false;
     connect(roomId);
-    pendingJoin = { name, pin };
+    pendingJoin = { name, pin, accessPin };
     page = 'joining';
   }
 
@@ -97,10 +98,21 @@
 
   // Once state arrives, we are in the room. Send join message if we have pending join info.
   $: if ($roomState && !joinSent && pendingJoin?.name) {
-    joinSent = true;
-    const { name, pin } = pendingJoin;
-    send({ type: 'join', name, ...(pin ? { pin } : {}) });
-    page = 'room';
+    if ($roomState.accessRequired && !pendingJoin.accessPin) {
+      directName = pendingJoin.name;
+      if (pendingJoin.pin) directPin = pendingJoin.pin;
+      page = 'room-enter-name';
+    } else {
+      joinSent = true;
+      const { name, pin, accessPin } = pendingJoin;
+      send({
+        type: 'join',
+        name,
+        ...(pin ? { pin } : {}),
+        ...(accessPin ? { accessPin } : {})
+      });
+      page = 'room';
+    }
   }
 
   // If we arrive via URL without a name (direct link), show the name prompt after connecting
@@ -126,6 +138,7 @@
 
   $: if ($wsError && page === 'room') {
     joinSent = false;
+    if (pendingJoin) pendingJoin = { ...pendingJoin, accessPin: undefined };
     page = 'room-enter-name';
   }
 
@@ -162,7 +175,7 @@
       {/if}
       <label>
         Your name
-        <input type="text" bind:value={directName} placeholder="Enter your name" />
+        <input type="text" bind:value={directName} placeholder="Enter your name" on:keydown={(e) => e.key === 'Enter' && handleDirectJoin()} />
       </label>
       {#if $roomState?.accessRequired}
         <label>
