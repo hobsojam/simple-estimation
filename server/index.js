@@ -1,5 +1,5 @@
-const http = require('http');
-const path = require('path');
+const http = require('node:http');
+const path = require('node:path');
 const express = require('express');
 const { WebSocketServer } = require('ws');
 const { v4: uuidv4 } = require('uuid');
