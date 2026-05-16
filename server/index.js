@@ -201,7 +201,7 @@ wss.on('connection', (ws, req) => {
       const sockets = roomSockets.get(roomId) || new Set();
       broadcastState(updatedRoom, sockets);
 
-      if (updatedRoom.timer && updatedRoom.timer.endsAt) {
+      if (updatedRoom.timer?.endsAt) {
         scheduleAutoReveal(roomId, updatedRoom.timer.endsAt);
       } else {
         clearRoomTimer(roomId);
