@@ -48,13 +48,14 @@ describe('handlers', () => {
       assert.equal(room.facilitatorId, 'p1');
     });
 
-    it('errors when PIN required but not provided', async () => {
+    it('joining without admin PIN succeeds but does not grant facilitator role', async () => {
       const pinHash = await bcrypt.hash('secret', 10);
       const room = createRoom('planning-poker', pinHash);
       const ws = mockWs('p1');
       await handleMessage(ws, room, { type: 'join', name: 'Alice' });
-      assert.equal(ws.messages[0].type, 'error');
+      assert.equal(ws.messages.length, 0);
       assert.equal(room.facilitatorId, null);
+      assert.equal(room.participants.length, 1);
     });
 
     it('errors on wrong PIN', async () => {
