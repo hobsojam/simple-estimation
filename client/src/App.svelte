@@ -110,12 +110,23 @@
 
   let directName = '';
   let directPin = '';
+  let directAccessPin = '';
 
   function handleDirectJoin() {
     if (!directName.trim()) return;
     joinSent = true;
-    send({ type: 'join', name: directName.trim(), ...(directPin.trim() ? { pin: directPin.trim() } : {}) });
+    send({
+      type: 'join',
+      name: directName.trim(),
+      ...(directAccessPin.trim() ? { accessPin: directAccessPin.trim() } : {}),
+      ...(directPin.trim() ? { pin: directPin.trim() } : {}),
+    });
     page = 'room';
+  }
+
+  $: if ($wsError && page === 'room') {
+    joinSent = false;
+    page = 'room-enter-name';
   }
 
   $: roomType = $roomState?.type;
@@ -146,10 +157,19 @@
   {:else if page === 'room-enter-name'}
     <div class="name-prompt">
       <h2>Join Room</h2>
+      {#if $wsError}
+        <div class="error-msg" role="alert">{$wsError}</div>
+      {/if}
       <label>
         Your name
         <input type="text" bind:value={directName} placeholder="Enter your name" />
       </label>
+      {#if $roomState?.accessRequired}
+        <label>
+          Access PIN
+          <input type="text" bind:value={directAccessPin} placeholder="Enter access PIN" />
+        </label>
+      {/if}
       <label>
         Facilitator PIN (optional)
         <input type="text" bind:value={directPin} placeholder="Enter PIN if you have one" />
@@ -214,6 +234,16 @@
     color: #b91c1c;
     border-radius: 4px;
     font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .error-msg {
+    padding: 8px 12px;
+    background: #fee2e2;
+    border: 1px solid #f87171;
+    color: #b91c1c;
+    border-radius: 4px;
+    font-size: 0.85rem;
     text-align: center;
   }
 
