@@ -57,27 +57,40 @@ test('joining with a wrong access PIN shows an error', async ({ page, request })
   await expect(page.getByRole('button', { name: 'Leave Room' })).not.toBeVisible();
 });
 
-test('joining without an access PIN shows a prompt', async ({ page, request }) => {
+test('navigating directly to an access-PIN room shows the join screen with an access PIN field', async ({ page, request }) => {
   const res = await request.post('/api/rooms', {
     data: { type: 'planning-poker', accessPin: 'secret' },
   });
   const { id } = await res.json();
 
-  // Navigate directly to the room URL (no access PIN known)
   await page.goto(`/?room=${id}`);
 
-  // Should ask for the access PIN
-  await expect(page.getByRole('heading', { name: 'Room Protected' })).toBeVisible();
-
-  // Enter the correct PIN
-  await page.getByPlaceholder('Enter access PIN').fill('secret');
-  await page.getByRole('button', { name: 'Continue' }).click();
-
-  // Should then ask for name
+  // Should go straight to the join screen — no separate "Room Protected" step
   await expect(page.getByRole('heading', { name: 'Join Room' })).toBeVisible();
+  await expect(page.getByPlaceholder('Enter access PIN')).toBeVisible();
+
   await page.getByPlaceholder('Enter your name').fill('Bob');
+  await page.getByPlaceholder('Enter access PIN').fill('secret');
   await page.getByRole('button', { name: 'Join' }).click();
 
-  // Bob is in the room
   await expect(page.getByRole('button', { name: 'Leave Room' })).toBeVisible();
+});
+
+test('room with both access and admin PIN can be joined without the admin PIN', async ({ page, request }) => {
+  const res = await request.post('/api/rooms', {
+    data: { type: 'planning-poker', accessPin: 'access', pin: 'admin' },
+  });
+  const { id } = await res.json();
+
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Join Room' }).click();
+  await page.getByPlaceholder('Paste room ID').fill(id);
+  await page.getByLabel('Your name').fill('Bob');
+  await page.getByPlaceholder('Enter room access PIN').fill('access');
+  // Deliberately leave the facilitator PIN blank
+  await page.locator('#join-panel').getByRole('button', { name: 'Join' }).click();
+
+  // Bob should be in the room as a regular participant (not blocked by missing admin PIN)
+  await expect(page.getByRole('button', { name: 'Leave Room' })).toBeVisible();
+  await expect(page.locator('.participant-list')).toContainText('Bob');
 });

@@ -99,7 +99,9 @@
   // Once state arrives, we are in the room. Send join message if we have pending join info.
   $: if ($roomState && !joinSent && pendingJoin?.name) {
     if ($roomState.accessRequired && !pendingJoin.accessPin) {
-      page = 'room-access-pin';
+      directName = pendingJoin.name;
+      if (pendingJoin.pin) directPin = pendingJoin.pin;
+      page = 'room-enter-name';
     } else {
       joinSent = true;
       const { name, pin, accessPin } = pendingJoin;
@@ -115,11 +117,7 @@
 
   // If we arrive via URL without a name (direct link), show the name prompt after connecting
   $: if ($roomState && page === 'joining' && !pendingJoin?.name) {
-    if ($roomState.accessRequired) {
-      page = 'room-access-pin';
-    } else {
-      page = 'room-enter-name';
-    }
+    page = 'room-enter-name';
   }
 
   let directName = '';
@@ -138,23 +136,9 @@
     page = 'room';
   }
 
-  function handleAccessPinSubmit() {
-    if ($roomState?.accessRequired && !directAccessPin.trim()) return;
-    
-    if (pendingJoin?.name) {
-      pendingJoin = { ...pendingJoin, accessPin: directAccessPin.trim() };
-    } else {
-      page = 'room-enter-name';
-    }
-  }
-
   $: if ($wsError) {
     joinSent = false;
-    if (page === 'room' && $roomState?.accessRequired) {
-      if (pendingJoin) pendingJoin = { ...pendingJoin, accessPin: undefined };
-      directAccessPin = '';
-      page = 'room-access-pin';
-    } else if (page === 'room') {
+    if (page === 'room') {
       page = 'room-enter-name';
     }
   }
@@ -183,20 +167,6 @@
     {#if $wsError}
       <div class="error-center" role="alert">{$wsError}</div>
     {/if}
-
-  {:else if page === 'room-access-pin'}
-    <div class="name-prompt">
-      <h2>Room Protected</h2>
-      <p>This room requires an access PIN.</p>
-      {#if $wsError}
-        <div class="error-msg" role="alert">{$wsError}</div>
-      {/if}
-      <label>
-        Access PIN
-        <input type="text" bind:value={directAccessPin} placeholder="Enter access PIN" on:keydown={(e) => e.key === 'Enter' && handleAccessPinSubmit()} />
-      </label>
-      <button class="primary" on:click={handleAccessPinSubmit} disabled={!directAccessPin.trim()}>Continue</button>
-    </div>
 
   {:else if page === 'room-enter-name'}
     <div class="name-prompt">

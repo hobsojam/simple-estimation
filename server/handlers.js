@@ -53,8 +53,7 @@ async function handleMessage(ws, room, data) {
       const noFacilitator = !room.facilitatorId;
       const pinRequired = !!room.pinHash;
 
-      if (pinRequired && noFacilitator) {
-        if (!data.pin) return sendError(ws, 'PIN required to become facilitator');
+      if (pinRequired && noFacilitator && data.pin) {
         const valid = await bcrypt.compare(String(data.pin), room.pinHash);
         if (!valid) return sendError(ws, 'Invalid PIN');
       }
