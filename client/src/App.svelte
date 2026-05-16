@@ -130,18 +130,16 @@
     send({
       type: 'join',
       name: directName.trim(),
+      ...(directAccessPin.trim() ? { accessPin: directAccessPin.trim() } : {}),
       ...(directPin.trim() ? { pin: directPin.trim() } : {}),
-      ...(directAccessPin.trim() ? { accessPin: directAccessPin.trim() } : {})
     });
     page = 'room';
   }
 
-  $: if ($wsError) {
+  $: if ($wsError && page === 'room') {
     joinSent = false;
     if (pendingJoin) pendingJoin = { ...pendingJoin, accessPin: undefined };
-    if (page === 'room') {
-      page = 'room-enter-name';
-    }
+    page = 'room-enter-name';
   }
 
   $: roomType = $roomState?.type;
@@ -189,7 +187,10 @@
         Facilitator PIN (optional)
         <input type="text" bind:value={directPin} placeholder="Enter PIN if you have one" />
       </label>
-      <button class="primary" on:click={handleDirectJoin} disabled={!directName.trim()}>Join</button>
+      <div class="prompt-actions">
+        <button class="secondary" on:click={handleLeave}>Cancel</button>
+        <button class="primary" on:click={handleDirectJoin} disabled={!directName.trim()}>Join</button>
+      </div>
     </div>
 
   {:else if page === 'room'}
@@ -322,6 +323,31 @@
   .primary:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .prompt-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .prompt-actions .primary,
+  .prompt-actions .secondary {
+    flex: 1;
+  }
+
+  .secondary {
+    padding: 10px;
+    background: #fff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .secondary:hover {
+    background: #f9fafb;
   }
 
   .room-wrapper {

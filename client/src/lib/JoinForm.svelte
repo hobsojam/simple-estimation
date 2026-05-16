@@ -21,7 +21,7 @@
       roomType,
       pin: pin.trim() || undefined,
       accessPin: accessPin.trim() || undefined,
-      roomName: roomName.trim() || undefined
+      roomName: roomName.trim() || undefined,
     });
   }
 
@@ -123,7 +123,7 @@
         <input type="text" bind:value={roomName} placeholder="e.g. Sprint 42 Planning" maxlength="200" />
       </label>
       <label>
-        Room Access PIN (optional)
+        Access PIN (optional)
         <input type="text" bind:value={accessPin} placeholder="Limit room access to specific people" />
       </label>
       <label>

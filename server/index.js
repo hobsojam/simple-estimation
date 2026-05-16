@@ -5,7 +5,7 @@ const { WebSocketServer } = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
-const { createRoom, getRoom, getAllRooms, removeParticipant, deleteRoom } = require('./rooms');
+const { createRoom, getRoom, getAllRooms, removeParticipant, deleteRoom, revealVotes, clearTimer } = require('./rooms');
 const { handleMessage } = require('./handlers');
 const { sanitizeRoom } = require('./sanitize');
 
@@ -90,6 +90,7 @@ app.delete('/api/rooms/:id', async (req, res) => {
     roomSockets.delete(room.id);
   }
 
+  clearRoomTimer(room.id);
   deleteRoom(room.id);
   res.status(204).end();
 });
@@ -111,6 +112,34 @@ function broadcastState(room, sockets) {
 }
 
 const roomSockets = new Map();
+const roomTimers = new Map();
+
+function clearRoomTimer(roomId) {
+  const handle = roomTimers.get(roomId);
+  if (handle) {
+    clearTimeout(handle);
+    roomTimers.delete(roomId);
+  }
+}
+
+function scheduleAutoReveal(roomId, endsAt) {
+  clearRoomTimer(roomId);
+  const delay = endsAt - Date.now();
+  if (delay <= 0) return;
+  const handle = setTimeout(() => {
+    roomTimers.delete(roomId);
+    const room = getRoom(roomId);
+    if (!room || room.revealed) return;
+    clearTimer(roomId);
+    revealVotes(roomId);
+    const updatedRoom = getRoom(roomId);
+    const sockets = roomSockets.get(roomId);
+    if (sockets && sockets.size > 0) {
+      broadcastState(updatedRoom, sockets);
+    }
+  }, delay);
+  roomTimers.set(roomId, handle);
+}
 
 wss.on('connection', (ws, req) => {
   const url = new URL(req.url, `http://localhost`);
@@ -171,6 +200,12 @@ wss.on('connection', (ws, req) => {
       const updatedRoom = getRoom(roomId);
       const sockets = roomSockets.get(roomId) || new Set();
       broadcastState(updatedRoom, sockets);
+
+      if (updatedRoom.timer && updatedRoom.timer.endsAt) {
+        scheduleAutoReveal(roomId, updatedRoom.timer.endsAt);
+      } else {
+        clearRoomTimer(roomId);
+      }
     });
   });
 
