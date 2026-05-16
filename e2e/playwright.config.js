@@ -15,10 +15,11 @@ module.exports = defineConfig({
   webServer: {
     command: 'node index.js',
     cwd: path.join(__dirname, '..', 'server'),
-    env: Object.assign({}, process.env, {
+    env: {
+      ...process.env,
       STATIC_DIR: path.join(__dirname, '..', 'client', 'dist'),
       PORT: '3000',
-    }),
+    },
     port: 3000,
     reuseExistingServer: !process.env.CI,
   },
