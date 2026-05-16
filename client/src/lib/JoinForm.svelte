@@ -7,6 +7,7 @@
   let roomId = $state('');
   let name = $state('');
   let pin = $state('');
+  let accessPin = $state('');
   let roomType = $state('planning-poker');
   let roomName = $state('');
 
@@ -15,7 +16,13 @@
 
   function handleCreate() {
     if (!name.trim()) return;
-    oncreate?.({ name: name.trim(), roomType, pin: pin.trim() || undefined, roomName: roomName.trim() || undefined });
+    oncreate?.({
+      name: name.trim(),
+      roomType,
+      pin: pin.trim() || undefined,
+      accessPin: accessPin.trim() || undefined,
+      roomName: roomName.trim() || undefined,
+    });
   }
 
   function handleJoin() {
@@ -105,6 +112,10 @@
       <label>
         Room name (optional)
         <input type="text" bind:value={roomName} placeholder="e.g. Sprint 42 Planning" maxlength="200" />
+      </label>
+      <label>
+        Access PIN (optional)
+        <input type="text" bind:value={accessPin} placeholder="Limit room access to specific people" />
       </label>
       <label>
         Facilitator PIN (optional)
