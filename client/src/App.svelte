@@ -138,6 +138,7 @@
 
   $: if ($wsError) {
     joinSent = false;
+    if (pendingJoin) pendingJoin = { ...pendingJoin, accessPin: undefined };
     if (page === 'room') {
       page = 'room-enter-name';
     }
