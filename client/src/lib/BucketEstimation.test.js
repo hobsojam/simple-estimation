@@ -67,3 +67,127 @@ describe('BucketEstimation — Download CSV button', () => {
     revokeObjectURL.mockRestore();
   });
 });
+
+describe('BucketEstimation — Add Item bar', () => {
+  beforeEach(() => {
+    roomState.set(null);
+    send.mockClear();
+  });
+
+  it('is shown to the facilitator', () => {
+    roomState.set({ ...baseState, facilitatorId: 'user-1' });
+    const { getByRole } = render(BucketEstimation);
+    expect(getByRole('button', { name: 'Add Item' })).toBeInTheDocument();
+  });
+
+  it('is not shown to a non-facilitator', () => {
+    roomState.set({ ...baseState, facilitatorId: 'someone-else' });
+    const { queryByRole } = render(BucketEstimation);
+    expect(queryByRole('button', { name: 'Add Item' })).not.toBeInTheDocument();
+  });
+
+  it('Add Item button is disabled when the input is empty', () => {
+    roomState.set({ ...baseState });
+    const { getByRole } = render(BucketEstimation);
+    expect(getByRole('button', { name: 'Add Item' })).toBeDisabled();
+  });
+
+  it('Add Item button is enabled when the input has text', async () => {
+    roomState.set({ ...baseState });
+    const { getByRole, getByPlaceholderText } = render(BucketEstimation);
+    await fireEvent.input(getByPlaceholderText('Add new item…'), { target: { value: 'Story A' } });
+    expect(getByRole('button', { name: 'Add Item' })).toBeEnabled();
+  });
+
+  it('sends add_item with the label when Add Item is clicked', async () => {
+    roomState.set({ ...baseState });
+    const { getByRole, getByPlaceholderText } = render(BucketEstimation);
+    await fireEvent.input(getByPlaceholderText('Add new item…'), { target: { value: 'Story A' } });
+    await fireEvent.click(getByRole('button', { name: 'Add Item' }));
+    expect(send).toHaveBeenCalledWith({ type: 'add_item', label: 'Story A' });
+  });
+
+  it('trims whitespace before sending', async () => {
+    roomState.set({ ...baseState });
+    const { getByRole, getByPlaceholderText } = render(BucketEstimation);
+    await fireEvent.input(getByPlaceholderText('Add new item…'), { target: { value: '  Story A  ' } });
+    await fireEvent.click(getByRole('button', { name: 'Add Item' }));
+    expect(send).toHaveBeenCalledWith({ type: 'add_item', label: 'Story A' });
+  });
+});
+
+// BUCKETS order: null (Unsized), XS, S, M, L, XL
+const ALL_POSITIONS = [null, 'XS', 'S', 'M', 'L', 'XL'];
+
+describe('BucketEstimation — keyboard navigation (onItemKeydown)', () => {
+  beforeEach(() => {
+    roomState.set(null);
+    send.mockClear();
+  });
+
+  it('Enter advances an Unsized item to the first bucket (XS)', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: null }],
+    });
+    const { getByRole } = render(BucketEstimation);
+    const card = getByRole('button', { name: 'Story A' });
+    await fireEvent.keyDown(card, { key: 'Enter' });
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: 'XS' });
+  });
+
+  it('Space advances an item forward by one bucket', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: 'S' }],
+    });
+    const { getAllByRole } = render(BucketEstimation);
+    const cards = getAllByRole('button', { name: 'Story A' });
+    await fireEvent.keyDown(cards[0], { key: ' ' });
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: 'M' });
+  });
+
+  it('wraps forward from XL back to Unsized (null)', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: 'XL' }],
+    });
+    const { getAllByRole } = render(BucketEstimation);
+    const cards = getAllByRole('button', { name: 'Story A' });
+    await fireEvent.keyDown(cards[0], { key: 'Enter' });
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: null });
+  });
+
+  it('Shift+Enter moves an item backwards one bucket', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: 'M' }],
+    });
+    const { getAllByRole } = render(BucketEstimation);
+    const cards = getAllByRole('button', { name: 'Story A' });
+    await fireEvent.keyDown(cards[0], { key: 'Enter', shiftKey: true });
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: 'S' });
+  });
+
+  it('wraps backward from Unsized to XL', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: null }],
+    });
+    const { getByRole } = render(BucketEstimation);
+    const card = getByRole('button', { name: 'Story A' });
+    await fireEvent.keyDown(card, { key: 'Enter', shiftKey: true });
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: 'XL' });
+  });
+
+  it('ignores keys other than Enter and Space', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: null }],
+    });
+    const { getByRole } = render(BucketEstimation);
+    const card = getByRole('button', { name: 'Story A' });
+    await fireEvent.keyDown(card, { key: 'ArrowDown' });
+    expect(send).not.toHaveBeenCalled();
+  });
+});

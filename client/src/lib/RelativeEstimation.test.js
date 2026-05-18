@@ -67,3 +67,125 @@ describe('RelativeEstimation — Download CSV button', () => {
     revokeObjectURL.mockRestore();
   });
 });
+
+describe('RelativeEstimation — Add Item bar', () => {
+  beforeEach(() => {
+    roomState.set(null);
+    send.mockClear();
+  });
+
+  it('is shown to the facilitator', () => {
+    roomState.set({ ...baseState, facilitatorId: 'user-1' });
+    const { getByRole } = render(RelativeEstimation);
+    expect(getByRole('button', { name: 'Add Item' })).toBeInTheDocument();
+  });
+
+  it('is not shown to a non-facilitator', () => {
+    roomState.set({ ...baseState, facilitatorId: 'someone-else' });
+    const { queryByRole } = render(RelativeEstimation);
+    expect(queryByRole('button', { name: 'Add Item' })).not.toBeInTheDocument();
+  });
+
+  it('Add Item button is disabled when the input is empty', () => {
+    roomState.set({ ...baseState });
+    const { getByRole } = render(RelativeEstimation);
+    expect(getByRole('button', { name: 'Add Item' })).toBeDisabled();
+  });
+
+  it('Add Item button is enabled when the input has text', async () => {
+    roomState.set({ ...baseState });
+    const { getByRole, getByPlaceholderText } = render(RelativeEstimation);
+    await fireEvent.input(getByPlaceholderText('Add new item…'), { target: { value: 'Story A' } });
+    expect(getByRole('button', { name: 'Add Item' })).toBeEnabled();
+  });
+
+  it('sends add_item with the label when Add Item is clicked', async () => {
+    roomState.set({ ...baseState });
+    const { getByRole, getByPlaceholderText } = render(RelativeEstimation);
+    await fireEvent.input(getByPlaceholderText('Add new item…'), { target: { value: 'Story A' } });
+    await fireEvent.click(getByRole('button', { name: 'Add Item' }));
+    expect(send).toHaveBeenCalledWith({ type: 'add_item', label: 'Story A' });
+  });
+
+  it('trims whitespace before sending', async () => {
+    roomState.set({ ...baseState });
+    const { getByRole, getByPlaceholderText } = render(RelativeEstimation);
+    await fireEvent.input(getByPlaceholderText('Add new item…'), { target: { value: '  Story A  ' } });
+    await fireEvent.click(getByRole('button', { name: 'Add Item' }));
+    expect(send).toHaveBeenCalledWith({ type: 'add_item', label: 'Story A' });
+  });
+});
+
+// ALL_POSITIONS order: null (Unplaced), '1', '2', '3', '5', '8', '13', '21'
+describe('RelativeEstimation — keyboard navigation (onItemKeydown)', () => {
+  beforeEach(() => {
+    roomState.set(null);
+    send.mockClear();
+  });
+
+  it('Enter advances an Unplaced item to the first column (1)', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: null }],
+    });
+    const { getByRole } = render(RelativeEstimation);
+    const card = getByRole('button', { name: 'Story A' });
+    await fireEvent.keyDown(card, { key: 'Enter' });
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: '1' });
+  });
+
+  it('Space advances an item forward by one column', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: '3' }],
+    });
+    const { getAllByRole } = render(RelativeEstimation);
+    const cards = getAllByRole('button', { name: 'Story A' });
+    await fireEvent.keyDown(cards[0], { key: ' ' });
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: '5' });
+  });
+
+  it('wraps forward from the last column (21) back to Unplaced (null)', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: '21' }],
+    });
+    const { getAllByRole } = render(RelativeEstimation);
+    const cards = getAllByRole('button', { name: 'Story A' });
+    await fireEvent.keyDown(cards[0], { key: 'Enter' });
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: null });
+  });
+
+  it('Shift+Enter moves an item backwards one column', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: '5' }],
+    });
+    const { getAllByRole } = render(RelativeEstimation);
+    const cards = getAllByRole('button', { name: 'Story A' });
+    await fireEvent.keyDown(cards[0], { key: 'Enter', shiftKey: true });
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: '3' });
+  });
+
+  it('wraps backward from Unplaced to the last column (21)', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: null }],
+    });
+    const { getByRole } = render(RelativeEstimation);
+    const card = getByRole('button', { name: 'Story A' });
+    await fireEvent.keyDown(card, { key: 'Enter', shiftKey: true });
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: '21' });
+  });
+
+  it('ignores keys other than Enter and Space', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: null }],
+    });
+    const { getByRole } = render(RelativeEstimation);
+    const card = getByRole('button', { name: 'Story A' });
+    await fireEvent.keyDown(card, { key: 'ArrowDown' });
+    expect(send).not.toHaveBeenCalled();
+  });
+});

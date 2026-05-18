@@ -146,8 +146,10 @@
                     role="button"
                     tabindex="0"
                     draggable="true"
+                    aria-describedby="relative-kb-hint"
                     on:dragstart={(e) => onDragStart(e, item.id)}
                     on:dragend={onDragEnd}
+                    on:keydown={(e) => onItemKeydown(e, item)}
                   >
                     {item.label}
                   </div>
