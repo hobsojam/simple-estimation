@@ -212,6 +212,18 @@ describe('handlers', () => {
       await handleMessage(ws, room, { type: 'add_item', label: '  Story B  ' });
       assert.equal(room.items[0].label, 'Story B');
     });
+
+    it('errors when item count is at the 200-item limit', async () => {
+      const room = createRoom('bucket', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      for (let i = 0; i < 200; i++) {
+        room.items.push({ id: `i${i}`, label: `Item ${i}`, position: null });
+      }
+      await handleMessage(ws, room, { type: 'add_item', label: 'One too many' });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+      assert.equal(room.items.length, 200);
+    });
   });
 
   describe('reveal', () => {

@@ -157,6 +157,11 @@ wss.on('connection', (ws, req) => {
     return;
   }
 
+  if (room.participants.length >= 100) {
+    ws.close(1008, 'Room is full');
+    return;
+  }
+
   ws.participantId = participantId || uuidv4();
   ws.roomId = roomId;
   ws.isAuthorized = room.accessPinHash === null;

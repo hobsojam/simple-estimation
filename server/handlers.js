@@ -114,6 +114,9 @@ async function handleMessage(ws, room, data) {
       if (data.label.trim().length > 200) {
         return sendError(ws, 'Item label must be 200 characters or fewer');
       }
+      if (room.items.length >= 200) {
+        return sendError(ws, 'Room has reached the maximum number of items');
+      }
       const newItem = room.type === 'planning-poker'
         ? { id: uuidv4(), label: data.label.trim(), status: 'pending', estimate: null }
         : { id: uuidv4(), label: data.label.trim(), position: null };
