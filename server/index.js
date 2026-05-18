@@ -113,6 +113,7 @@ function broadcastState(room, sockets) {
 
 const roomSockets = new Map();
 const roomTimers = new Map();
+const wsMessageTimestamps = new WeakMap();
 
 function clearRoomTimer(roomId) {
   const handle = roomTimers.get(roomId);
@@ -176,6 +177,15 @@ wss.on('connection', (ws, req) => {
   let messageChain = Promise.resolve();
 
   ws.on('message', (raw) => {
+    const now = Date.now();
+    const timestamps = wsMessageTimestamps.get(ws) || [];
+    const recent = timestamps.filter(t => now - t < 1000);
+    if (recent.length >= 30) {
+      ws.close(1008, 'Rate limit exceeded');
+      return;
+    }
+    wsMessageTimestamps.set(ws, [...recent, now]);
+
     let data;
     try {
       data = JSON.parse(raw);
