@@ -65,6 +65,16 @@ describe('POST /api/rooms', () => {
   });
 });
 
+describe('HTTP security headers', () => {
+  it('sets X-Content-Type-Options, X-Frame-Options, Referrer-Policy, and CSP', async () => {
+    const res = await request(app).get('/api/rooms');
+    assert.equal(res.headers['x-content-type-options'], 'nosniff');
+    assert.equal(res.headers['x-frame-options'], 'DENY');
+    assert.equal(res.headers['referrer-policy'], 'no-referrer');
+    assert.ok(res.headers['content-security-policy'], 'CSP header should be present');
+  });
+});
+
 describe('GET /api/rooms', () => {
   it('includes name and pin protections in room listing', async () => {
     await request(app).post('/api/rooms').send({
