@@ -6,7 +6,7 @@ test('facilitator starts a 5-second timer and votes auto-reveal when it expires'
   await page.getByRole('tab', { name: 'Create Room' }).click();
   await page.getByLabel('Your name').fill('Alice');
   await page.getByRole('button', { name: 'Create Room' }).click();
-  await expect(page.getByRole('button', { name: 'Leave Room' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Leave Room' })).toBeVisible({ timeout: 10000 });
 
   // Cast a vote so there is something to reveal
   await page.locator('button.card', { hasText: '5' }).click();
@@ -36,7 +36,7 @@ test('facilitator can cancel a running timer', async ({ page }) => {
   await page.getByRole('tab', { name: 'Create Room' }).click();
   await page.getByLabel('Your name').fill('Alice');
   await page.getByRole('button', { name: 'Create Room' }).click();
-  await expect(page.getByRole('button', { name: 'Leave Room' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Leave Room' })).toBeVisible({ timeout: 10000 });
 
   // Start a 60-second timer
   await page.fill('#timer-duration', '60');

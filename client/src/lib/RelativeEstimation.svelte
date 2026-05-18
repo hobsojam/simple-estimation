@@ -1,5 +1,6 @@
 <script>
   import { roomState, send, wsError, myId } from '../ws.js';
+  import { buildCSV } from './poker-utils.js';
 
   const FIBONACCI = [1, 2, 3, 5, 8, 13, 21];
   const ALL_POSITIONS = [null, ...FIBONACCI.map(String)];
@@ -10,6 +11,19 @@
 
   $: state = $roomState;
   $: isFacilitator = state && $myId && state.facilitatorId === $myId;
+  $: placedItems = state ? state.items.filter(i => i.position !== null) : [];
+
+  function downloadCSV() {
+    const blob = new Blob([buildCSV(placedItems.map(i => ({ label: i.label, estimate: i.position })))], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `estimation-${state.id.slice(0, 8)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
   $: unplaced = state ? state.items.filter(i => i.position === null) : [];
   $: inColumn = (fib) => state ? state.items.filter(i => i.position === String(fib)) : [];
@@ -61,7 +75,12 @@
   <p id="relative-kb-hint" class="sr-only">Press Enter or Space to move to the next column. Hold Shift to move backwards.</p>
     <div class="header">
       <h2>Relative Estimation</h2>
-      <span class="room-id">Room: {state.id}</span>
+      <div class="header-right">
+        <span class="room-id">Room: {state.id}</span>
+        {#if placedItems.length > 0}
+          <button class="csv-btn" on:click={downloadCSV}>Download CSV</button>
+        {/if}
+      </div>
     </div>
 
     {#if $wsError}
@@ -170,6 +189,26 @@
 
   .header h2 {
     margin: 0;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .csv-btn {
+    padding: 6px 12px;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: #374151;
+  }
+
+  .csv-btn:hover {
+    background: #f9fafb;
   }
 
   .room-id {
