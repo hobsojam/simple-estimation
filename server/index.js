@@ -227,6 +227,14 @@ wss.on('connection', (ws, req) => {
       }
     }
   });
+
+  ws.on('error', (err) => {
+    console.error(`[WS] Socket error (${ws.participantId ?? 'unknown'}):`, err.message);
+  });
+});
+
+wss.on('error', (err) => {
+  console.error('[WSS] Server error:', err.message);
 });
 
 const ROOM_TTL_MS = (parseInt(process.env.ROOM_TTL_DAYS) || 7) * 24 * 60 * 60 * 1000;
