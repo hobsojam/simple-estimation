@@ -14,6 +14,7 @@ function createRoom(type, pinHash, name, accessPinHash) {
     items: [],
     revealed: false,
     timer: { endsAt: null, durationSeconds: null },
+    lastActivityAt: Date.now(),
   };
   rooms.set(room.id, room);
   return room;
@@ -54,6 +55,7 @@ function castVote(roomId, participantId, vote) {
   const participant = room.participants.find(p => p.id === participantId);
   if (participant) {
     participant.vote = vote;
+    room.lastActivityAt = Date.now();
   }
 }
 
@@ -63,6 +65,7 @@ function moveItem(roomId, itemId, position) {
   const item = room.items.find(i => i.id === itemId);
   if (item) {
     item.position = position;
+    room.lastActivityAt = Date.now();
   }
 }
 
@@ -70,12 +73,14 @@ function addItem(roomId, item) {
   const room = rooms.get(roomId);
   if (!room) return;
   room.items.push(item);
+  room.lastActivityAt = Date.now();
 }
 
 function revealVotes(roomId) {
   const room = rooms.get(roomId);
   if (!room) return;
   room.revealed = true;
+  room.lastActivityAt = Date.now();
 }
 
 function startTimer(roomId, durationSeconds) {
@@ -98,6 +103,7 @@ function resetRound(roomId) {
   for (const p of room.participants) {
     p.vote = null;
   }
+  room.lastActivityAt = Date.now();
 }
 
 function selectItem(roomId, itemId) {

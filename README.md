@@ -191,11 +191,24 @@ For an interactive Playwright UI:
 cd e2e && npm run test:ui
 ```
 
+## Configuration
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PORT` | `3000` | HTTP and WebSocket listen port |
+| `STATIC_DIR` | `./public` | Directory to serve static files from |
+| `ROOM_TTL_DAYS` | `7` | Days of inactivity before a room is automatically deleted |
+
+Rooms are swept hourly. A room's inactivity timer resets on any vote, item move, add, reveal, or round reset. Participants joining or leaving does not count as activity.
+
 ## Docker
 
 ```bash
 docker build -t simple-estimation .
 docker run -p 3000:3000 simple-estimation
+
+# Override the TTL
+docker run -p 3000:3000 -e ROOM_TTL_DAYS=14 simple-estimation
 ```
 
 Or with docker-compose:

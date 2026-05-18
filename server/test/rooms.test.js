@@ -22,6 +22,13 @@ describe('rooms', () => {
       assert.ok(room.id);
     });
 
+    it('sets lastActivityAt on creation', () => {
+      const before = Date.now();
+      const room = createRoom('planning-poker', null);
+      const after = Date.now();
+      assert.ok(room.lastActivityAt >= before && room.lastActivityAt <= after);
+    });
+
     it('stores pinHash when provided', () => {
       const room = createRoom('bucket', 'hash');
       assert.equal(room.pinHash, 'hash');
@@ -46,6 +53,60 @@ describe('rooms', () => {
 
     it('returns undefined for unknown id', () => {
       assert.equal(getRoom('nope'), undefined);
+    });
+  });
+
+  describe('lastActivityAt', () => {
+    it('is updated by castVote', () => {
+      const room = createRoom('planning-poker', null);
+      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+      const before = Date.now();
+      castVote(room.id, 'p1', '5');
+      assert.ok(room.lastActivityAt >= before);
+    });
+
+    it('is updated by moveItem', () => {
+      const room = createRoom('bucket', null);
+      addItem(room.id, { id: 'i1', label: 'A', position: null });
+      const before = Date.now();
+      moveItem(room.id, 'i1', 'M');
+      assert.ok(room.lastActivityAt >= before);
+    });
+
+    it('is updated by addItem', () => {
+      const room = createRoom('bucket', null);
+      const before = Date.now();
+      addItem(room.id, { id: 'i1', label: 'A', position: null });
+      assert.ok(room.lastActivityAt >= before);
+    });
+
+    it('is updated by revealVotes', () => {
+      const room = createRoom('planning-poker', null);
+      const before = Date.now();
+      revealVotes(room.id);
+      assert.ok(room.lastActivityAt >= before);
+    });
+
+    it('is updated by resetRound', () => {
+      const room = createRoom('planning-poker', null);
+      const before = Date.now();
+      resetRound(room.id);
+      assert.ok(room.lastActivityAt >= before);
+    });
+
+    it('is NOT updated by addParticipant', () => {
+      const room = createRoom('planning-poker', null);
+      const snapshot = room.lastActivityAt;
+      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+      assert.equal(room.lastActivityAt, snapshot);
+    });
+
+    it('is NOT updated by removeParticipant', () => {
+      const room = createRoom('planning-poker', null);
+      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+      const snapshot = room.lastActivityAt;
+      removeParticipant(room.id, 'p1');
+      assert.equal(room.lastActivityAt, snapshot);
     });
   });
 

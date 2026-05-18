@@ -5,4 +5,5 @@ services:
       - "3000:3000"
     environment:
       - PORT=3000
+      # - ROOM_TTL_DAYS=7  # delete rooms inactive for this many days (default: 7)
     restart: unless-stopped
