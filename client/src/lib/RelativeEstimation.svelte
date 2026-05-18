@@ -26,7 +26,7 @@
   }
 
   $: unplaced = state ? state.items.filter(i => i.position === null) : [];
-  $: inColumn = (fib) => state ? state.items.filter(i => i.position === String(fib)) : [];
+  function inColumn(fib) { return state ? state.items.filter(i => i.position === String(fib)) : []; }
 
   function addItem() {
     const label = newItemLabel.trim();
@@ -130,7 +130,7 @@
       <div class="scale">
         <div class="scale-label">Relative effort — drag items to the appropriate column</div>
         <div class="columns">
-          {#each FIBONACCI as fib}
+          {#each FIBONACCI as fib (fib)}
             <div
               class="fib-column"
               on:dragover={onDragOver}
