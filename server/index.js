@@ -229,10 +229,29 @@ wss.on('connection', (ws, req) => {
   });
 });
 
+const ROOM_TTL_MS = (parseInt(process.env.ROOM_TTL_DAYS) || 7) * 24 * 60 * 60 * 1000;
+const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
+
+function sweepInactiveRooms(sockets, ttlMs = ROOM_TTL_MS) {
+  const cutoff = Date.now() - ttlMs;
+  for (const room of getAllRooms()) {
+    if (room.lastActivityAt < cutoff) {
+      const roomWs = sockets.get(room.id);
+      if (roomWs) {
+        for (const ws of roomWs) ws.close(1001, 'Room expired');
+        sockets.delete(room.id);
+      }
+      clearRoomTimer(room.id);
+      deleteRoom(room.id);
+    }
+  }
+}
+
 if (require.main === module) {
+  setInterval(() => sweepInactiveRooms(roomSockets), SWEEP_INTERVAL_MS).unref();
   server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
   });
 }
 
-module.exports = { app };
+module.exports = { app, sweepInactiveRooms };
