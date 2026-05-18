@@ -25,7 +25,7 @@ const apiLimiter = rateLimit({
 
 const createRoomLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 20,
+  max: process.env.ROOM_RATE_LIMIT_MAX ? Number.parseInt(process.env.ROOM_RATE_LIMIT_MAX, 10) : 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many rooms created, please try again later' },
