@@ -39,7 +39,9 @@ function removeParticipant(roomId, participantId) {
   if (!room) return;
   room.participants = room.participants.filter(p => p.id !== participantId);
   if (room.facilitatorId === participantId) {
-    room.facilitatorId = room.participants.length > 0 ? room.participants[0].id : null;
+    room.facilitatorId = room.pinHash === null && room.participants.length > 0
+      ? room.participants[0].id
+      : null;
   }
 }
 

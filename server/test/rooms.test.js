@@ -127,13 +127,22 @@ describe('rooms', () => {
       assert.equal(room.participants[0].id, 'p2');
     });
 
-    it('auto-assigns facilitator when facilitator leaves', () => {
+    it('auto-assigns facilitator when facilitator leaves a non-PIN room', () => {
       const room = createRoom('planning-poker', null);
       addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
       addParticipant(room.id, { id: 'p2', name: 'Bob', vote: null });
       setFacilitator(room.id, 'p1');
       removeParticipant(room.id, 'p1');
       assert.equal(room.facilitatorId, 'p2');
+    });
+
+    it('clears facilitator without reassigning when facilitator leaves a PIN-protected room', () => {
+      const room = createRoom('planning-poker', 'hashed-pin');
+      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+      addParticipant(room.id, { id: 'p2', name: 'Bob', vote: null });
+      setFacilitator(room.id, 'p1');
+      removeParticipant(room.id, 'p1');
+      assert.equal(room.facilitatorId, null);
     });
 
     it('sets facilitatorId to null when last participant leaves', () => {
