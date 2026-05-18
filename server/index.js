@@ -262,7 +262,7 @@ wss.on('error', (err) => {
   console.error('[WSS] Server error:', err.message);
 });
 
-const ROOM_TTL_MS = (parseInt(process.env.ROOM_TTL_DAYS) || 7) * 24 * 60 * 60 * 1000;
+const ROOM_TTL_MS = (Number.parseInt(process.env.ROOM_TTL_DAYS) || 7) * 24 * 60 * 60 * 1000;
 const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
 
 function sweepInactiveRooms(sockets, ttlMs = ROOM_TTL_MS) {
