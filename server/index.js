@@ -14,6 +14,16 @@ const STATIC_DIR = process.env.STATIC_DIR || './public';
 
 const app = express();
 app.use(express.json());
+
+app.use((req, res, next) => {
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-Frame-Options', 'DENY');
+  res.set('Referrer-Policy', 'no-referrer');
+  // style-src 'unsafe-inline' is required for Svelte's runtime-injected styles (transitions, animations)
+  res.set('Content-Security-Policy', "default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'");
+  next();
+});
+
 app.use(express.static(path.resolve(STATIC_DIR)));
 
 const apiLimiter = rateLimit({
