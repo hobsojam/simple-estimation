@@ -25,6 +25,7 @@ describe('handlers', () => {
       const ws = mockWs('p1');
       await handleMessage(ws, room, { type: 'join' });
       assert.equal(ws.messages[0].type, 'error');
+      assert.equal(ws.messages[0].message, 'Name is required');
     });
 
     it('errors when name is blank', async () => {
@@ -32,6 +33,21 @@ describe('handlers', () => {
       const ws = mockWs('p1');
       await handleMessage(ws, room, { type: 'join', name: '   ' });
       assert.equal(ws.messages[0].type, 'error');
+      assert.equal(ws.messages[0].message, 'Name is required');
+    });
+
+    it('trims whitespace from participant name', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: '  Alice  ' });
+      assert.equal(room.participants[0].name, 'Alice');
+    });
+
+    it('sets initial participant vote to null', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      assert.equal(room.participants[0].vote, null);
     });
 
     it('first joiner becomes facilitator with no PIN', async () => {
@@ -82,6 +98,7 @@ describe('handlers', () => {
       ws.isAuthorized = false;
       await handleMessage(ws, room, { type: 'join', name: 'Alice' });
       assert.equal(ws.messages[0].type, 'error');
+      assert.equal(ws.messages[0].message, 'Access PIN required');
       assert.equal(ws.isAuthorized, false);
     });
 
@@ -92,6 +109,7 @@ describe('handlers', () => {
       ws.isAuthorized = false;
       await handleMessage(ws, room, { type: 'join', name: 'Alice', accessPin: 'wrong' });
       assert.equal(ws.messages[0].type, 'error');
+      assert.equal(ws.messages[0].message, 'Invalid access PIN');
       assert.equal(ws.isAuthorized, false);
     });
 
@@ -123,7 +141,9 @@ describe('handlers', () => {
       const ws = mockWs('p1');
       await handleMessage(ws, room, { type: 'join', name: 'Alice' });
       await handleMessage(ws, room, { type: 'vote', vote: '99' });
-      assert.ok(ws.messages.some(m => m.type === 'error'));
+      const err = ws.messages.find(m => m.type === 'error');
+      assert.ok(err);
+      assert.ok(err.message.includes('99'));
     });
 
     it('errors when vote is missing', async () => {
