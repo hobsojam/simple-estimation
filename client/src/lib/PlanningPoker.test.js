@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render } from '@testing-library/svelte';
+import { render, fireEvent } from '@testing-library/svelte';
 import PlanningPoker from './PlanningPoker.svelte';
 import { roomState, send } from '../ws.js';
 
@@ -128,5 +128,44 @@ describe('finalise section', () => {
     roomState.set(revealedWithActiveItem);
     const { getByRole } = render(PlanningPoker);
     expect(getByRole('button', { name: 'Finalise' })).toBeEnabled();
+  });
+});
+
+describe('PlanningPoker — outbound messages', () => {
+  beforeEach(() => {
+    roomState.set(null);
+    send.mockClear();
+  });
+
+  it('clicking a card sends a vote message', async () => {
+    roomState.set({
+      ...baseState,
+      participants: [{ id: 'user-1', name: 'Alice', voted: false, vote: null }],
+    });
+    const { container } = render(PlanningPoker);
+    const card = [...container.querySelectorAll('button.card')].find(b => b.textContent.trim() === '5');
+    await fireEvent.click(card);
+    expect(send).toHaveBeenCalledWith({ type: 'vote', vote: '5' });
+  });
+
+  it('clicking Reveal Votes sends a reveal message', async () => {
+    roomState.set({
+      ...baseState,
+      participants: [{ id: 'user-1', name: 'Alice', voted: true, vote: null }],
+    });
+    const { getByRole } = render(PlanningPoker);
+    await fireEvent.click(getByRole('button', { name: 'Reveal Votes' }));
+    expect(send).toHaveBeenCalledWith({ type: 'reveal' });
+  });
+
+  it('clicking Reset sends a reset message', async () => {
+    roomState.set({
+      ...baseState,
+      revealed: true,
+      participants: [{ id: 'user-1', name: 'Alice', voted: true, vote: '5' }],
+    });
+    const { getByRole } = render(PlanningPoker);
+    await fireEvent.click(getByRole('button', { name: 'Reset Round' }));
+    expect(send).toHaveBeenCalledWith({ type: 'reset' });
   });
 });

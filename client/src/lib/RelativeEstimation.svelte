@@ -146,8 +146,10 @@
                     role="button"
                     tabindex="0"
                     draggable="true"
+                    aria-describedby="relative-kb-hint"
                     on:dragstart={(e) => onDragStart(e, item.id)}
                     on:dragend={onDragEnd}
+                    on:keydown={(e) => onItemKeydown(e, item)}
                   >
                     {item.label}
                   </div>
@@ -291,7 +293,7 @@
 
   .empty-hint {
     font-size: 0.8rem;
-    color: #767676;
+    color: #4b5563;
     text-align: center;
     padding: 12px 0;
   }
@@ -303,7 +305,7 @@
 
   .scale-label {
     font-size: 0.8rem;
-    color: #767676;
+    color: #4b5563;
     margin-bottom: 10px;
   }
 
