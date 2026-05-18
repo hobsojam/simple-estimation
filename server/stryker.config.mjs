@@ -3,7 +3,7 @@ export default {
   reporters: ['json', 'progress'],
   testRunner: 'command',
   commandRunner: {
-    command: 'node --test test/rooms.test.js test/handlers.test.js test/api.test.js test/sanitize.test.js',
+    command: 'node --test test/rooms.test.js test/handlers.test.js test/api.test.js test/sanitize.test.js test/sweep.test.js',
   },
   coverageAnalysis: 'off',
   mutate: ['handlers.js', 'rooms.js', 'sanitize.js'],
