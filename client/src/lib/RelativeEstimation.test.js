@@ -114,6 +114,15 @@ describe('RelativeEstimation — Add Item bar', () => {
     await fireEvent.click(getByRole('button', { name: 'Add Item' }));
     expect(send).toHaveBeenCalledWith({ type: 'add_item', label: 'Story A' });
   });
+
+  it('clears the input after submission', async () => {
+    roomState.set({ ...baseState });
+    const { getByRole, getByPlaceholderText } = render(RelativeEstimation);
+    const input = getByPlaceholderText('Add new item…');
+    await fireEvent.input(input, { target: { value: 'Story A' } });
+    await fireEvent.click(getByRole('button', { name: 'Add Item' }));
+    expect(input.value).toBe('');
+  });
 });
 
 // ALL_POSITIONS order: null (Unplaced), '1', '2', '3', '5', '8', '13', '21'
