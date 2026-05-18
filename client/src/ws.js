@@ -17,7 +17,7 @@ function getOrCreateParticipantId() {
     id = crypto.randomUUID
       ? crypto.randomUUID()
       : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-          const r = (Math.random() * 16) | 0;
+          const r = Math.trunc(Math.random() * 16);
           return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
         });
     sessionStorage.setItem(SESSION_KEY, id);
@@ -78,7 +78,7 @@ function openConnection() {
 }
 
 export function send(message) {
-  if (socket && socket.readyState === WebSocket.OPEN) {
+  if (socket?.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(message));
   }
 }

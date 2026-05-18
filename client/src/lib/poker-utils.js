@@ -14,7 +14,7 @@ export function getMajorityVote(participants) {
 export function buildCSV(doneItems) {
   const rows = ['Item,Estimate'];
   for (const item of doneItems) {
-    rows.push(`"${item.label.replace(/"/g, '""')}",${item.estimate}`);
+    rows.push(`"${item.label.replaceAll('"', '""')}",${item.estimate}`);
   }
   return rows.join('\n');
 }
