@@ -3,6 +3,9 @@ const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests',
+  reporter: process.env.CI
+    ? [['json', { outputFile: 'e2e-results.json' }], ['list']]
+    : 'list',
   // Timer tests run sequentially on the same worker; after the first test waits
   // out a 5-second countdown the CI runner can be busy enough that the second
   // test's WebSocket handshake exceeds the 10 000 ms Leave Room guard. One
