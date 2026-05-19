@@ -645,6 +645,69 @@ describe('handlers', () => {
     });
   });
 
+  describe('move_item', () => {
+    it('errors when itemId is missing', async () => {
+      const room = createRoom('bucket', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      ws.messages.length = 0;
+      await handleMessage(ws, room, { type: 'move_item', position: 'M' });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+      assert.equal(room.items[0].position, null);
+    });
+
+    it('errors when position is missing', async () => {
+      const room = createRoom('bucket', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      ws.messages.length = 0;
+      await handleMessage(ws, room, { type: 'move_item', itemId: room.items[0].id });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+    });
+
+    it('any participant can move an item', async () => {
+      const room = createRoom('bucket', null);
+      const facilitator = mockWs('f1');
+      const participant = mockWs('p2');
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(participant, room, { type: 'join', name: 'Bob' });
+      await handleMessage(facilitator, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(participant, room, { type: 'move_item', itemId: room.items[0].id, position: 'L' });
+      assert.ok(!participant.messages.some(m => m.type === 'error'));
+      assert.equal(room.items[0].position, 'L');
+    });
+
+    it('facilitator can also move an item', async () => {
+      const room = createRoom('bucket', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'move_item', itemId: room.items[0].id, position: 'XS' });
+      assert.equal(room.items[0].position, 'XS');
+    });
+
+    it('position can be null (move back to unsized)', async () => {
+      const room = createRoom('bucket', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'move_item', itemId: room.items[0].id, position: 'M' });
+      await handleMessage(ws, room, { type: 'move_item', itemId: room.items[0].id, position: null });
+      assert.equal(room.items[0].position, null);
+    });
+
+    it('works with relative estimation column values', async () => {
+      const room = createRoom('relative', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'move_item', itemId: room.items[0].id, position: '13' });
+      assert.equal(room.items[0].position, '13');
+    });
+  });
+
   describe('unknown message type', () => {
     it('errors on unrecognised type', async () => {
       const room = createRoom('planning-poker', null);

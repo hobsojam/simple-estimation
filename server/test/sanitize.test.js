@@ -70,6 +70,39 @@ describe('sanitizeRoom', () => {
     assert.deepEqual(result.items, planningPokerItems);
   });
 
+  it('sets voted=true when a participant has voted', () => {
+    const result = sanitizeRoom({ ...baseRoom, revealed: false });
+    assert.equal(result.participants[0].voted, true);
+    assert.equal(result.participants[1].voted, true);
+  });
+
+  it('sets voted=false when a participant has not voted', () => {
+    const room = { ...baseRoom, participants: [{ id: 'p1', name: 'Alice', vote: null }] };
+    const result = sanitizeRoom(room);
+    assert.equal(result.participants[0].voted, false);
+  });
+
+  it('includes timer state when room has a timer', () => {
+    const timer = { endsAt: 9_999_999, durationSeconds: 60 };
+    const result = sanitizeRoom({ ...baseRoom, timer });
+    assert.deepEqual(result.timer, timer);
+  });
+
+  it('uses null defaults for timer when room.timer is undefined', () => {
+    const { timer: _timer, ...roomWithoutTimer } = baseRoom;
+    const result = sanitizeRoom(roomWithoutTimer);
+    assert.deepEqual(result.timer, { endsAt: null, durationSeconds: null });
+  });
+
+  it('passes through bucket/relative item shape (position field) unchanged', () => {
+    const bucketItems = [
+      { id: 'i1', label: 'Story A', position: null },
+      { id: 'i2', label: 'Story B', position: 'M' },
+    ];
+    const result = sanitizeRoom({ ...baseRoom, type: 'bucket', items: bucketItems });
+    assert.deepEqual(result.items, bucketItems);
+  });
+
   it('returns safe stub when not authorized', () => {
     const result = sanitizeRoom(baseRoom, false);
     assert.equal(result.id, baseRoom.id);
