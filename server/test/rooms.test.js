@@ -54,6 +54,14 @@ describe('rooms', () => {
     it('returns undefined for unknown id', () => {
       assert.equal(getRoom('nope'), undefined);
     });
+
+    it('returns undefined for null id', () => {
+      assert.equal(getRoom(null), undefined);
+    });
+
+    it('returns undefined for undefined id', () => {
+      assert.equal(getRoom(undefined), undefined);
+    });
   });
 
   describe('lastActivityAt', () => {
@@ -151,6 +159,24 @@ describe('rooms', () => {
       setFacilitator(room.id, 'p1');
       removeParticipant(room.id, 'p1');
       assert.equal(room.facilitatorId, null);
+    });
+
+    it('removeParticipant on a non-existent room is a no-op', () => {
+      assert.doesNotThrow(() => removeParticipant('no-such-room', 'p1'));
+    });
+
+    it('removeParticipant with an unknown participant id is a no-op', () => {
+      const room = createRoom('planning-poker', null);
+      assert.doesNotThrow(() => removeParticipant(room.id, 'no-such-participant'));
+      assert.equal(room.participants.length, 0);
+    });
+
+    it('addParticipant with a duplicate id adds the participant again', () => {
+      const room = createRoom('planning-poker', null);
+      const p = { id: 'p1', name: 'Alice', vote: null };
+      addParticipant(room.id, p);
+      addParticipant(room.id, p);
+      assert.equal(room.participants.length, 2);
     });
 
     it('does not change facilitator when a non-facilitator leaves', () => {
