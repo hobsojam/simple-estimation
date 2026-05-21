@@ -27,168 +27,256 @@ function sendError(ws, message) {
   send(ws, { type: 'error', message });
 }
 
+function isFacilitator(ws, room, message) {
+  if (room.facilitatorId !== ws.participantId) {
+    sendError(ws, message);
+    return false;
+  }
+  return true;
+}
+
+function findItem(room, itemId) {
+  return room.items.find(i => i.id === itemId);
+}
+
+function parseVoteValue(ws, value, requiredMessage, invalidPrefix) {
+  if (value === undefined || value === null) {
+    sendError(ws, requiredMessage);
+    return null;
+  }
+
+  const voteStr = String(value);
+  if (!VALID_VOTES.has(voteStr)) {
+    sendError(ws, `${invalidPrefix}: ${voteStr}`);
+    return null;
+  }
+
+  return voteStr;
+}
+
+function validateItemLabel(ws, room, label) {
+  if (!label || typeof label !== 'string' || !label.trim()) {
+    sendError(ws, 'Item label required');
+    return null;
+  }
+
+  const trimmedLabel = label.trim();
+  if (trimmedLabel.length > 200) {
+    sendError(ws, 'Item label must be 200 characters or fewer');
+    return null;
+  }
+
+  if (room.items.length >= 200) {
+    sendError(ws, 'Room has reached the maximum number of items');
+    return null;
+  }
+
+  return trimmedLabel;
+}
+
+function createItem(room, label) {
+  if (room.type === 'planning-poker') {
+    return { id: uuidv4(), label, status: 'pending', estimate: null };
+  }
+
+  return { id: uuidv4(), label, position: null };
+}
+
+async function ensureAccess(ws, room, data) {
+  if (!room.accessPinHash || ws.isAuthorized) {
+    return true;
+  }
+
+  if (!data.accessPin) {
+    // Stryker disable next-line StringLiteral
+    console.log(`[WS] Join failed: access PIN required`);
+    sendError(ws, 'Access PIN required');
+    return false;
+  }
+
+  const valid = await bcrypt.compare(String(data.accessPin), room.accessPinHash);
+  if (!valid) {
+    // Stryker disable next-line StringLiteral
+    console.log(`[WS] Join failed: invalid access PIN`);
+    sendError(ws, 'Invalid access PIN');
+    return false;
+  }
+
+  // Stryker disable next-line StringLiteral
+  console.log(`[WS] Join: access PIN verified for ${ws.participantId}`);
+  ws.isAuthorized = true;
+  return true;
+}
+
+async function verifyInitialFacilitatorPin(ws, room, data, noFacilitator, pinRequired) {
+  if (!pinRequired || !noFacilitator || !data.pin) {
+    return false;
+  }
+
+  const valid = await bcrypt.compare(String(data.pin), room.pinHash);
+  if (!valid) {
+    sendError(ws, 'Invalid PIN');
+    return null;
+  }
+
+  return true;
+}
+
+async function handleJoin(ws, room, data) {
+  if (!data.name || typeof data.name !== 'string' || !data.name.trim()) {
+    // Stryker disable next-line StringLiteral
+    console.log(`[WS] Join failed: name missing or invalid`);
+    return sendError(ws, 'Name is required');
+  }
+
+  if (!(await ensureAccess(ws, room, data))) return;
+
+  // Stryker disable next-line StringLiteral
+  console.log(`[WS] Join success for ${data.name} (${ws.participantId}) in ${room.id}`);
+
+  const noFacilitator = !room.facilitatorId;
+  const pinRequired = !!room.pinHash;
+  const facilitatorPinValid = await verifyInitialFacilitatorPin(ws, room, data, noFacilitator, pinRequired);
+  if (facilitatorPinValid === null) return;
+
+  const participant = { id: ws.participantId, name: data.name.trim(), vote: null };
+  addParticipant(room.id, participant);
+
+  if (!noFacilitator) return;
+  if (!pinRequired || facilitatorPinValid) {
+    setFacilitator(room.id, ws.participantId);
+  }
+}
+
+async function handleClaimFacilitator(ws, room, data) {
+  if (!data.pin) return sendError(ws, 'PIN required');
+  if (!room.pinHash) return sendError(ws, 'This room has no PIN');
+
+  const valid = await bcrypt.compare(String(data.pin), room.pinHash);
+  if (!valid) return sendError(ws, 'Invalid PIN');
+
+  setFacilitator(room.id, ws.participantId);
+}
+
+function handleVote(ws, room, data) {
+  const voteStr = parseVoteValue(ws, data.vote, 'Vote value required', 'Invalid vote value');
+  if (voteStr === null) return;
+
+  castVote(room.id, ws.participantId, voteStr);
+}
+
+function handleMoveItem(ws, room, data) {
+  if (!data.itemId) return sendError(ws, 'itemId required');
+  if (data.position === undefined) return sendError(ws, 'position required');
+
+  moveItem(room.id, data.itemId, data.position);
+}
+
+function handleAddItem(ws, room, data) {
+  if (!isFacilitator(ws, room, 'Only the facilitator can add items')) return;
+
+  const label = validateItemLabel(ws, room, data.label);
+  if (label === null) return;
+
+  addItem(room.id, createItem(room, label));
+}
+
+function handleSelectItem(ws, room, data) {
+  if (!isFacilitator(ws, room, 'Only the facilitator can select items')) return;
+  if (!data.itemId) return sendError(ws, 'itemId required');
+
+  const item = findItem(room, data.itemId);
+  if (!item) return sendError(ws, 'Item not found');
+  if (item.status === 'done') return sendError(ws, 'Cannot select a done item');
+
+  selectItem(room.id, data.itemId);
+}
+
+function handleFinaliseItem(ws, room, data) {
+  if (!isFacilitator(ws, room, 'Only the facilitator can finalise items')) return;
+  if (!data.itemId) return sendError(ws, 'itemId required');
+
+  const estimateStr = parseVoteValue(ws, data.estimate, 'estimate required', 'Invalid estimate value');
+  if (estimateStr === null) return;
+
+  const item = findItem(room, data.itemId);
+  if (!item) return sendError(ws, 'Item not found');
+  if (item.status !== 'active') return sendError(ws, 'Only the active item can be finalised');
+
+  finaliseItem(room.id, data.itemId, estimateStr);
+}
+
+function handleRemoveItem(ws, room, data) {
+  if (!isFacilitator(ws, room, 'Only the facilitator can remove items')) return;
+  if (!data.itemId) return sendError(ws, 'itemId required');
+
+  const item = findItem(room, data.itemId);
+  if (!item) return sendError(ws, 'Item not found');
+  if (item.status !== 'pending') return sendError(ws, 'Only pending items can be removed');
+
+  removeItem(room.id, data.itemId);
+}
+
+function handleReveal(ws, room) {
+  if (!isFacilitator(ws, room, 'Only the facilitator can reveal votes')) return;
+
+  clearTimer(room.id);
+  revealVotes(room.id);
+}
+
+function handleReset(ws, room) {
+  if (!isFacilitator(ws, room, 'Only the facilitator can reset the round')) return;
+
+  resetRound(room.id);
+}
+
+function handleStartTimer(ws, room, data) {
+  if (!isFacilitator(ws, room, 'Only the facilitator can start the timer')) return;
+  if (room.type !== 'planning-poker') return sendError(ws, 'Timer is only available in Planning Poker rooms');
+
+  const seconds = Number(data.seconds);
+  if (!Number.isInteger(seconds) || seconds < 5 || seconds > 300) {
+    return sendError(ws, 'Timer duration must be between 5 and 300 seconds');
+  }
+
+  startTimer(room.id, seconds);
+}
+
+function handleCancelTimer(ws, room) {
+  if (!isFacilitator(ws, room, 'Only the facilitator can cancel the timer')) return;
+
+  clearTimer(room.id);
+}
+
 async function handleMessage(ws, room, data) {
   switch (data.type) {
-    case 'join': {
-      if (!data.name || typeof data.name !== 'string' || !data.name.trim()) {
-        // Stryker disable next-line StringLiteral
-        console.log(`[WS] Join failed: name missing or invalid`);
-        return sendError(ws, 'Name is required');
-      }
-
-      // 1. Check Access PIN if room is protected and ws not yet authorized
-      if (room.accessPinHash && !ws.isAuthorized) {
-        if (!data.accessPin) {
-          // Stryker disable next-line StringLiteral
-          console.log(`[WS] Join failed: access PIN required`);
-          return sendError(ws, 'Access PIN required');
-        }
-        const valid = await bcrypt.compare(String(data.accessPin), room.accessPinHash);
-        if (!valid) {
-          // Stryker disable next-line StringLiteral
-          console.log(`[WS] Join failed: invalid access PIN`);
-          return sendError(ws, 'Invalid access PIN');
-        }
-        // Stryker disable next-line StringLiteral
-        console.log(`[WS] Join: access PIN verified for ${ws.participantId}`);
-        ws.isAuthorized = true;
-      }
-
-      // Stryker disable next-line StringLiteral
-      console.log(`[WS] Join success for ${data.name} (${ws.participantId}) in ${room.id}`);
-
-      const noFacilitator = !room.facilitatorId;
-      const pinRequired = !!room.pinHash;
-
-      if (pinRequired && noFacilitator && data.pin) {
-        const valid = await bcrypt.compare(String(data.pin), room.pinHash);
-        if (!valid) return sendError(ws, 'Invalid PIN');
-      }
-
-      const participant = { id: ws.participantId, name: data.name.trim(), vote: null };
-      addParticipant(room.id, participant);
-
-      if (noFacilitator) {
-        if (!pinRequired) {
-          setFacilitator(room.id, ws.participantId);
-        } else if (data.pin) {
-          const valid = await bcrypt.compare(String(data.pin), room.pinHash);
-          if (valid) setFacilitator(room.id, ws.participantId);
-        }
-      }
-
-      break;
-    }
-
-    case 'claim_facilitator': {
-      if (!data.pin) return sendError(ws, 'PIN required');
-      if (!room.pinHash) return sendError(ws, 'This room has no PIN');
-      const valid = await bcrypt.compare(String(data.pin), room.pinHash);
-      if (!valid) return sendError(ws, 'Invalid PIN');
-      setFacilitator(room.id, ws.participantId);
-      break;
-    }
-
-    case 'vote': {
-      if (data.vote === undefined || data.vote === null) return sendError(ws, 'Vote value required');
-      const voteStr = String(data.vote);
-      if (!VALID_VOTES.has(voteStr)) {
-        return sendError(ws, `Invalid vote value: ${voteStr}`);
-      }
-      castVote(room.id, ws.participantId, voteStr);
-      break;
-    }
-
-    case 'move_item': {
-      if (!data.itemId) return sendError(ws, 'itemId required');
-      if (data.position === undefined) return sendError(ws, 'position required');
-      moveItem(room.id, data.itemId, data.position);
-      break;
-    }
-
-    case 'add_item': {
-      if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can add items');
-      if (!data.label || typeof data.label !== 'string' || !data.label.trim()) {
-        return sendError(ws, 'Item label required');
-      }
-      if (data.label.trim().length > 200) {
-        return sendError(ws, 'Item label must be 200 characters or fewer');
-      }
-      if (room.items.length >= 200) {
-        return sendError(ws, 'Room has reached the maximum number of items');
-      }
-      const newItem = room.type === 'planning-poker'
-        ? { id: uuidv4(), label: data.label.trim(), status: 'pending', estimate: null }
-        : { id: uuidv4(), label: data.label.trim(), position: null };
-      addItem(room.id, newItem);
-      break;
-    }
-
-    case 'select_item': {
-      if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can select items');
-      if (!data.itemId) return sendError(ws, 'itemId required');
-      const selectTarget = room.items.find(i => i.id === data.itemId);
-      if (!selectTarget) return sendError(ws, 'Item not found');
-      if (selectTarget.status === 'done') return sendError(ws, 'Cannot select a done item');
-      selectItem(room.id, data.itemId);
-      break;
-    }
-
-    case 'finalise_item': {
-      if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can finalise items');
-      if (!data.itemId) return sendError(ws, 'itemId required');
-      if (data.estimate === undefined || data.estimate === null) return sendError(ws, 'estimate required');
-      const estimateStr = String(data.estimate);
-      if (!VALID_VOTES.has(estimateStr)) return sendError(ws, `Invalid estimate value: ${estimateStr}`);
-      const finaliseTarget = room.items.find(i => i.id === data.itemId);
-      if (!finaliseTarget) return sendError(ws, 'Item not found');
-      if (finaliseTarget.status !== 'active') return sendError(ws, 'Only the active item can be finalised');
-      finaliseItem(room.id, data.itemId, estimateStr);
-      break;
-    }
-
-    case 'remove_item': {
-      if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can remove items');
-      if (!data.itemId) return sendError(ws, 'itemId required');
-      const removeTarget = room.items.find(i => i.id === data.itemId);
-      if (!removeTarget) return sendError(ws, 'Item not found');
-      if (removeTarget.status !== 'pending') return sendError(ws, 'Only pending items can be removed');
-      removeItem(room.id, data.itemId);
-      break;
-    }
-
-    case 'reveal': {
-      if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can reveal votes');
-      clearTimer(room.id);
-      revealVotes(room.id);
-      break;
-    }
-
-    case 'reset': {
-      if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can reset the round');
-      resetRound(room.id);
-      break;
-    }
-
-    case 'start_timer': {
-      if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can start the timer');
-      if (room.type !== 'planning-poker') return sendError(ws, 'Timer is only available in Planning Poker rooms');
-      const seconds = Number(data.seconds);
-      if (!Number.isInteger(seconds) || seconds < 5 || seconds > 300) {
-        return sendError(ws, 'Timer duration must be between 5 and 300 seconds');
-      }
-      startTimer(room.id, seconds);
-      break;
-    }
-
-    case 'cancel_timer': {
-      if (room.facilitatorId !== ws.participantId) return sendError(ws, 'Only the facilitator can cancel the timer');
-      clearTimer(room.id);
-      break;
-    }
+    case 'join':
+      return handleJoin(ws, room, data);
+    case 'claim_facilitator':
+      return handleClaimFacilitator(ws, room, data);
+    case 'vote':
+      return handleVote(ws, room, data);
+    case 'move_item':
+      return handleMoveItem(ws, room, data);
+    case 'add_item':
+      return handleAddItem(ws, room, data);
+    case 'select_item':
+      return handleSelectItem(ws, room, data);
+    case 'finalise_item':
+      return handleFinaliseItem(ws, room, data);
+    case 'remove_item':
+      return handleRemoveItem(ws, room, data);
+    case 'reveal':
+      return handleReveal(ws, room);
+    case 'reset':
+      return handleReset(ws, room);
+    case 'start_timer':
+      return handleStartTimer(ws, room, data);
+    case 'cancel_timer':
+      return handleCancelTimer(ws, room);
 
     default:
-      sendError(ws, `Unknown message type: ${data.type}`);
+      return sendError(ws, `Unknown message type: ${data.type}`);
   }
 }
 
