@@ -1,7 +1,10 @@
-const { describe, it } = require('node:test');
+const { describe, it, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const request = require('supertest');
 const { app } = require('../index');
+const { clearRooms, getRoom } = require('../rooms');
+
+beforeEach(() => clearRooms());
 
 describe('POST /api/rooms', () => {
   it('returns 200 with an id for a valid type', async () => {
@@ -97,5 +100,69 @@ describe('GET /api/rooms', () => {
     assert.equal(res.status, 200);
     const unnamed = res.body.find(r => r.name === null);
     assert.ok(unnamed, 'at least one unnamed room should appear in listing');
+  });
+});
+
+describe('DELETE /api/rooms/:id', () => {
+  it('returns 404 for a non-existent room', async () => {
+    const res = await request(app)
+      .delete('/api/rooms/no-such-room')
+      .send({});
+    assert.equal(res.status, 404);
+    assert.equal(res.body.error, 'Room not found');
+  });
+
+  it('deletes a room with no PIN and returns 204', async () => {
+    const createRes = await request(app)
+      .post('/api/rooms')
+      .send({ type: 'bucket' });
+
+    const res = await request(app)
+      .delete(`/api/rooms/${createRes.body.id}`)
+      .send({});
+
+    assert.equal(res.status, 204);
+    assert.equal(getRoom(createRes.body.id), undefined);
+  });
+
+  it('returns 403 when PIN is required but not provided', async () => {
+    const createRes = await request(app)
+      .post('/api/rooms')
+      .send({ type: 'planning-poker', pin: 'admin' });
+
+    const res = await request(app)
+      .delete(`/api/rooms/${createRes.body.id}`)
+      .send({});
+
+    assert.equal(res.status, 403);
+    assert.equal(res.body.error, 'PIN required');
+    assert.ok(getRoom(createRes.body.id));
+  });
+
+  it('returns 403 for an incorrect PIN', async () => {
+    const createRes = await request(app)
+      .post('/api/rooms')
+      .send({ type: 'planning-poker', pin: 'admin' });
+
+    const res = await request(app)
+      .delete(`/api/rooms/${createRes.body.id}`)
+      .send({ pin: 'wrong' });
+
+    assert.equal(res.status, 403);
+    assert.equal(res.body.error, 'Incorrect PIN');
+    assert.ok(getRoom(createRes.body.id));
+  });
+
+  it('deletes a PIN-protected room with the correct PIN and returns 204', async () => {
+    const createRes = await request(app)
+      .post('/api/rooms')
+      .send({ type: 'planning-poker', pin: 'admin' });
+
+    const res = await request(app)
+      .delete(`/api/rooms/${createRes.body.id}`)
+      .send({ pin: 'admin' });
+
+    assert.equal(res.status, 204);
+    assert.equal(getRoom(createRes.body.id), undefined);
   });
 });
