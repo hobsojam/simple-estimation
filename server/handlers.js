@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const {
-  addParticipant,
+  upsertParticipant,
   setFacilitator,
   castVote,
   moveItem,
@@ -139,8 +139,8 @@ async function handleJoin(ws, room, data) {
   const facilitatorPinValid = await verifyInitialFacilitatorPin(ws, room, data, noFacilitator, pinRequired);
   if (facilitatorPinValid === null) return;
 
-  const participant = { id: ws.participantId, name: data.name.trim(), vote: null };
-  addParticipant(room.id, participant);
+  const participantName = data.name.trim();
+  upsertParticipant(room.id, { id: ws.participantId, name: participantName, vote: null });
 
   if (!noFacilitator) return;
   if (!pinRequired || facilitatorPinValid) {
@@ -159,6 +159,10 @@ async function handleClaimFacilitator(ws, room, data) {
 }
 
 function handleVote(ws, room, data) {
+  if (!room.participants.some(p => p.id === ws.participantId)) {
+    return sendError(ws, 'Join before voting');
+  }
+
   const voteStr = parseVoteValue(ws, data.vote, 'Vote value required', 'Invalid vote value');
   if (voteStr === null) return;
 
