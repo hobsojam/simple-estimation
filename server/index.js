@@ -152,7 +152,7 @@ function scheduleAutoReveal(roomId, endsAt) {
   roomTimers.set(roomId, handle);
 }
 
-wss.on('connection', (ws, req) => {
+function handleConnection(ws, req) {
   const url = new URL(req.url, `http://localhost`);
   const roomId = url.searchParams.get('roomId');
   const participantId = url.searchParams.get('participantId');
@@ -256,7 +256,9 @@ wss.on('connection', (ws, req) => {
   ws.on('error', (err) => {
     console.error(`[WS] Socket error (${ws.participantId ?? 'unknown'}):`, err.message);
   });
-});
+}
+
+wss.on('connection', handleConnection);
 
 wss.on('error', (err) => {
   console.error('[WSS] Server error:', err.message);
@@ -287,4 +289,13 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, sweepInactiveRooms };
+module.exports = {
+  app,
+  broadcastState,
+  clearRoomTimer,
+  handleConnection,
+  roomSockets,
+  roomTimers,
+  scheduleAutoReveal,
+  sweepInactiveRooms,
+};
