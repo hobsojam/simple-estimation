@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, fireEvent } from '@testing-library/svelte';
+import { render, fireEvent, waitFor } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import App from './App.svelte';
 import { roomState, wsError, connect, disconnect, send } from './ws.js';
@@ -26,145 +26,229 @@ const baseRoom = {
   revealed: false,
 };
 
+function mockFetch({ createResponse } = {}) {
+  const fetchMock = vi.fn(async (url, options = {}) => {
+    if (url === '/api/rooms' && options.method === 'POST') {
+      if (createResponse instanceof Error) throw createResponse;
+      return createResponse ?? {
+        ok: true,
+        json: async () => ({ id: 'created-room' }),
+      };
+    }
+
+    if (url === '/api/rooms') {
+      return {
+        ok: true,
+        json: async () => [],
+      };
+    }
+
+    return {
+      ok: true,
+      json: async () => ({}),
+    };
+  });
+
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+async function flush() {
+  await tick();
+  await Promise.resolve();
+}
+
 beforeEach(() => {
   roomState.set(null);
   wsError.set(null);
   connect.mockClear();
   disconnect.mockClear();
   send.mockClear();
+  mockFetch();
   window.history.pushState({}, '', '/');
 });
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   window.history.pushState({}, '', '/');
 });
 
-describe('App.svelte — home page', () => {
-  it('renders the join form by default', () => {
+describe('App.svelte page state machine', () => {
+  it('mounts on the home page without URL params', () => {
     const { getByRole } = render(App);
-    expect(getByRole('tablist')).toBeInTheDocument();
-  });
 
-  it('does not call connect() when there is no ?room= URL param', () => {
-    render(App);
+    expect(getByRole('tablist')).toBeInTheDocument();
+    expect(getByRole('tab', { name: 'Join Room' })).toHaveAttribute('aria-selected', 'true');
     expect(connect).not.toHaveBeenCalled();
   });
-});
 
-describe('App.svelte — direct link (?room=<id>)', () => {
-  it('calls connect() with the roomId from the URL param', async () => {
-    window.history.pushState({}, '', '?room=abc123');
-    render(App);
-    await tick();
+  it('mounts in joining state and connects when ?room=<id> is present', async () => {
+    window.history.pushState({}, '', '/?room=abc123');
+
+    const { getByText } = render(App);
+    await flush();
+
     expect(connect).toHaveBeenCalledWith('abc123');
+    expect(getByText(/Connecting/)).toBeInTheDocument();
   });
 
-  it('shows the connecting state when roomId is in URL', async () => {
-    window.history.pushState({}, '', '?room=abc123');
-    const { getByText } = render(App);
-    await tick();
-    expect(getByText('Connecting…')).toBeInTheDocument();
-  });
+  it('runs the direct-link flow after room state arrives without a pending name', async () => {
+    window.history.pushState({}, '', '/?room=abc123');
 
-  it('shows the name prompt when roomState arrives with no pending name', async () => {
-    window.history.pushState({}, '', '?room=abc123');
-    const { getByRole } = render(App);
-    await tick();
+    const { getByRole, getByPlaceholderText } = render(App);
+    await flush();
     roomState.set(baseRoom);
-    await tick();
+    await flush();
+
     expect(getByRole('heading', { name: 'Join Room' })).toBeInTheDocument();
-  });
-});
 
-describe('App.svelte — wsError display', () => {
-  it('shows wsError with role="alert" during the joining state', async () => {
-    window.history.pushState({}, '', '?room=abc123');
+    await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Alice' } });
+    await fireEvent.input(getByPlaceholderText('Enter PIN if you have one'), { target: { value: 'admin-pin' } });
+    await fireEvent.click(getByRole('button', { name: 'Join' }));
+    await flush();
+
+    expect(send).toHaveBeenCalledWith({
+      type: 'join',
+      name: 'Alice',
+      pin: 'admin-pin',
+    });
+    expect(getByRole('button', { name: 'Leave Room' })).toBeInTheDocument();
+  });
+
+  it('runs the join form flow and sends join once room state arrives', async () => {
+    const { getByRole, getByPlaceholderText, getByText } = render(App);
+
+    await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Bob' } });
+    await fireEvent.input(getByPlaceholderText('Paste room ID'), { target: { value: 'room-join' } });
+    await fireEvent.input(getByPlaceholderText('Enter room access PIN'), { target: { value: 'guest-pin' } });
+    await fireEvent.input(getByPlaceholderText('Enter PIN if you have one'), { target: { value: 'facilitator-pin' } });
+    await fireEvent.click(getByRole('button', { name: 'Join' }));
+    await flush();
+
+    expect(window.location.search).toBe('?room=room-join');
+    expect(connect).toHaveBeenCalledWith('room-join');
+    expect(getByText(/Connecting/)).toBeInTheDocument();
+
+    roomState.set(baseRoom);
+    await flush();
+
+    expect(send).toHaveBeenCalledWith({
+      type: 'join',
+      name: 'Bob',
+      pin: 'facilitator-pin',
+      accessPin: 'guest-pin',
+    });
+    expect(getByRole('button', { name: 'Leave Room' })).toBeInTheDocument();
+  });
+
+  it('runs the create flow, posts the room config, and joins the created room', async () => {
+    const fetchMock = mockFetch();
+    const { getByRole, getByPlaceholderText } = render(App);
+
+    await fireEvent.click(getByRole('tab', { name: 'Create Room' }));
+    await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Carol' } });
+    await fireEvent.input(getByPlaceholderText('e.g. Sprint 42 Planning'), { target: { value: 'Sprint 42' } });
+    await fireEvent.input(getByPlaceholderText('Limit room access to specific people'), { target: { value: 'team-pin' } });
+    await fireEvent.input(getByPlaceholderText('Set a PIN to protect facilitator role'), { target: { value: 'admin-pin' } });
+    await fireEvent.click(getByRole('button', { name: 'Create Room' }));
+
+    await waitFor(() => expect(connect).toHaveBeenCalledWith('created-room'));
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/rooms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'planning-poker',
+        pin: 'admin-pin',
+        accessPin: 'team-pin',
+        name: 'Sprint 42',
+      }),
+    });
+    expect(window.location.search).toBe('?room=created-room&type=planning-poker');
+
+    roomState.set(baseRoom);
+    await flush();
+
+    expect(send).toHaveBeenCalledWith({
+      type: 'join',
+      name: 'Carol',
+      pin: 'admin-pin',
+      accessPin: 'team-pin',
+    });
+    expect(getByRole('button', { name: 'Leave Room' })).toBeInTheDocument();
+  });
+
+  it('shows createError when creating a room fails', async () => {
+    mockFetch({ createResponse: new Error('Failed to fetch') });
+    const { getByRole, getByPlaceholderText, findByRole } = render(App);
+
+    await fireEvent.click(getByRole('tab', { name: 'Create Room' }));
+    await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Dana' } });
+    await fireEvent.click(getByRole('button', { name: 'Create Room' }));
+
+    expect(await findByRole('alert')).toHaveTextContent('Could not reach the server. Is it running?');
+    expect(connect).not.toHaveBeenCalled();
+  });
+
+  it('shows wsError while still joining', async () => {
+    window.history.pushState({}, '', '/?room=abc123');
     const { getByRole } = render(App);
-    await tick();
+    await flush();
+
     wsError.set('Connection failed');
-    await tick();
+    await flush();
+
     expect(getByRole('alert')).toHaveTextContent('Connection failed');
+    expect(send).not.toHaveBeenCalled();
   });
-});
 
-describe('App.svelte — create room error', () => {
-  it('shows createError with role="alert" when API POST fails', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
-    const { getByRole, findByRole } = render(App);
+  it('routes a pending join to the access prompt when access is required', async () => {
+    const { getByRole, getByPlaceholderText } = render(App);
 
-    // Switch to Create tab (it may already be active — click it to be sure)
-    const createTab = getByRole('tab', { name: 'Create Room' });
-    fireEvent.click(createTab);
-    await tick();
+    await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Eve' } });
+    await fireEvent.input(getByPlaceholderText('Paste room ID'), { target: { value: 'locked-room' } });
+    await fireEvent.input(getByPlaceholderText('Enter PIN if you have one'), { target: { value: 'admin-pin' } });
+    await fireEvent.click(getByRole('button', { name: 'Join' }));
+    await flush();
 
-    // Fill in the name to enable the Create button
-    const nameInput = document.querySelector('#create-panel input[placeholder="Enter your name"]');
-    fireEvent.input(nameInput, { target: { value: 'Alice' } });
-    await tick();
+    roomState.set({ ...baseRoom, accessRequired: true });
+    await flush();
 
-    // Click Create Room
-    const createBtn = getByRole('button', { name: 'Create Room' });
-    fireEvent.click(createBtn);
-    await tick();
+    expect(send).not.toHaveBeenCalled();
+    expect(getByRole('heading', { name: 'Join Room' })).toBeInTheDocument();
+    expect(getByPlaceholderText('Enter your name')).toHaveValue('Eve');
+    expect(getByPlaceholderText('Enter access PIN')).toBeInTheDocument();
+    expect(getByPlaceholderText('Enter PIN if you have one')).toHaveValue('admin-pin');
 
-    const alert = await findByRole('alert');
-    expect(alert).toBeInTheDocument();
+    await fireEvent.input(getByPlaceholderText('Enter access PIN'), { target: { value: 'guest-pin' } });
+    await fireEvent.click(getByRole('button', { name: 'Join' }));
+    await flush();
+
+    expect(send).toHaveBeenCalledWith({
+      type: 'join',
+      name: 'Eve',
+      accessPin: 'guest-pin',
+      pin: 'admin-pin',
+    });
   });
-});
 
-describe('App.svelte — join flow', () => {
-  it('sends a join message and shows the room once roomState arrives', async () => {
-    window.history.pushState({}, '', '?room=abc123');
-    render(App);
-    await tick();
-
-    // Navigate to name prompt (direct link flow)
+  it('handleLeave disconnects, clears URL params, and returns home', async () => {
+    window.history.pushState({}, '', '/?room=abc123');
+    const { getByRole } = render(App);
+    await flush();
     roomState.set(baseRoom);
-    await tick();
+    await flush();
 
-    // Fill in the name and submit
-    const nameInput = document.querySelector('input[placeholder="Enter your name"]');
-    if (nameInput) {
-      fireEvent.input(nameInput, { target: { value: 'Alice' } });
-      await tick();
-      const joinBtn = document.querySelector('button.primary');
-      if (joinBtn && !joinBtn.disabled) {
-        fireEvent.click(joinBtn);
-        await tick();
-      }
-    }
+    await fireEvent.input(getByRole('textbox', { name: 'Your name' }), { target: { value: 'Frank' } });
+    await fireEvent.click(getByRole('button', { name: 'Join' }));
+    await flush();
 
-    expect(send).toHaveBeenCalledWith(expect.objectContaining({ type: 'join', name: 'Alice' }));
-  });
-});
+    await fireEvent.click(getByRole('button', { name: 'Leave Room' }));
+    await flush();
 
-describe('App.svelte — leave room', () => {
-  it('calls disconnect() and returns to home page when Leave Room is clicked', async () => {
-    window.history.pushState({}, '', '?room=abc123');
-    const { getByText } = render(App);
-    await tick();
-    roomState.set(baseRoom);
-    await tick();
-
-    // Submit name to get to room page
-    const nameInput = document.querySelector('input[placeholder="Enter your name"]');
-    if (nameInput) {
-      fireEvent.input(nameInput, { target: { value: 'Alice' } });
-      await tick();
-      const joinBtn = document.querySelector('button.primary:not([disabled])');
-      if (joinBtn) {
-        fireEvent.click(joinBtn);
-        await tick();
-      }
-    }
-
-    const leaveBtn = document.querySelector('.leave-btn');
-    if (leaveBtn) {
-      fireEvent.click(leaveBtn);
-      await tick();
-      expect(disconnect).toHaveBeenCalled();
-      // Back to home: join form tab list should be visible
-      expect(document.querySelector('[role="tablist"]')).toBeInTheDocument();
-    }
+    expect(disconnect).toHaveBeenCalled();
+    expect(window.location.search).toBe('');
+    expect(getByRole('tablist')).toBeInTheDocument();
+    expect(connect).toHaveBeenCalledTimes(1);
   });
 });
