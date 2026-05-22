@@ -34,6 +34,17 @@ function addParticipant(roomId, participant) {
   room.participants.push(participant);
 }
 
+function upsertParticipant(roomId, participant) {
+  const room = rooms.get(roomId);
+  if (!room) return;
+  const existing = room.participants.find(p => p.id === participant.id);
+  if (existing) {
+    existing.name = participant.name;
+    return;
+  }
+  room.participants.push(participant);
+}
+
 function removeParticipant(roomId, participantId) {
   const room = rooms.get(roomId);
   if (!room) return;
@@ -149,6 +160,7 @@ module.exports = {
   getRoom,
   getAllRooms,
   addParticipant,
+  upsertParticipant,
   removeParticipant,
   setFacilitator,
   castVote,

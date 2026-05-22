@@ -133,9 +133,46 @@ describe('handlers', () => {
       assert.equal(ws.isAuthorized, true);
       assert.equal(room.facilitatorId, 'p1');
     });
+
+    it('deduplicates when the same participant joins again', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'vote', vote: '5' });
+      await handleMessage(ws, room, { type: 'join', name: 'Alice Updated' });
+      assert.equal(room.participants.length, 1);
+      assert.equal(room.participants[0].id, 'p1');
+      assert.equal(room.participants[0].name, 'Alice Updated');
+      assert.equal(room.participants[0].vote, '5');
+      assert.equal(room.facilitatorId, 'p1');
+      assert.ok(!ws.messages.some(m => m.type === 'error'));
+    });
   });
 
   describe('vote', () => {
+    it('records votes from two participants in sequence without errors', async () => {
+      const room = createRoom('planning-poker', null);
+      const alice = mockWs('p1');
+      const bob = mockWs('p2');
+      await handleMessage(alice, room, { type: 'join', name: 'Alice' });
+      await handleMessage(bob, room, { type: 'join', name: 'Bob' });
+      await handleMessage(alice, room, { type: 'vote', vote: '5' });
+      await handleMessage(bob, room, { type: 'vote', vote: '8' });
+      assert.equal(room.participants.find(p => p.id === 'p1').vote, '5');
+      assert.equal(room.participants.find(p => p.id === 'p2').vote, '8');
+      assert.ok(!alice.messages.some(m => m.type === 'error'));
+      assert.ok(!bob.messages.some(m => m.type === 'error'));
+    });
+
+    it('errors gracefully when voting before joining', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'vote', vote: '5' });
+      assert.equal(ws.messages[0].type, 'error');
+      assert.equal(ws.messages[0].message, 'Join before voting');
+      assert.equal(room.participants.length, 0);
+    });
+
     it('errors on invalid vote value', async () => {
       const room = createRoom('planning-poker', null);
       const ws = mockWs('p1');
@@ -203,6 +240,22 @@ describe('handlers', () => {
       await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
       assert.equal(room.items.length, 1);
       assert.equal(room.items[0].label, 'Story A');
+    });
+
+    it('does not clear existing votes when adding an item during voting', async () => {
+      const room = createRoom('planning-poker', null);
+      const facilitator = mockWs('f1');
+      const participant = mockWs('p2');
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(participant, room, { type: 'join', name: 'Bob' });
+      await handleMessage(facilitator, room, { type: 'vote', vote: '5' });
+      await handleMessage(participant, room, { type: 'vote', vote: '8' });
+      await handleMessage(facilitator, room, { type: 'add_item', label: 'Story A' });
+      assert.equal(room.items.length, 1);
+      assert.equal(room.participants.find(p => p.id === 'f1').vote, '5');
+      assert.equal(room.participants.find(p => p.id === 'p2').vote, '8');
+      assert.ok(!facilitator.messages.some(m => m.type === 'error'));
+      assert.ok(!participant.messages.some(m => m.type === 'error'));
     });
 
     it('trims whitespace from label', async () => {
