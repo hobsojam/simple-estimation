@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const { createRoom, getRoom, getAllRooms, removeParticipant, deleteRoom, revealVotes, clearTimer } = require('./rooms');
 const { handleMessage } = require('./handlers');
 const { sanitizeRoom } = require('./sanitize');
+const { shortText } = require('./validate');
 
 const PORT = process.env.PORT || 3000;
 const STATIC_DIR = process.env.STATIC_DIR || './public';
@@ -56,7 +57,7 @@ app.post('/api/rooms', createRoomLimiter, async (req, res) => {
   if (!type || !validTypes.includes(type)) {
     return res.status(400).json({ error: 'Invalid room type' });
   }
-  const trimmedName = name ? String(name).trim().slice(0, 200) : null;
+  const trimmedName = shortText(name);
   const pinHash = pin ? await bcrypt.hash(String(pin), 10) : null;
   const accessPinHash = accessPin ? await bcrypt.hash(String(accessPin), 10) : null;
   const room = createRoom(type, pinHash, trimmedName || null, accessPinHash);

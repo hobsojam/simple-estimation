@@ -134,6 +134,29 @@ describe('handlers', () => {
       assert.equal(room.facilitatorId, 'p1');
     });
 
+    it('strips HTML tags from participant name', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: '<script>alert(1)</script>Alice' });
+      assert.equal(room.participants[0].name, 'Alice');
+    });
+
+    it('errors when name is only HTML tags', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: '<script>alert(1)</script>' });
+      assert.equal(ws.messages[0].type, 'error');
+      assert.equal(room.participants.length, 0);
+    });
+
+    it('errors when name exceeds 200 characters', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: 'a'.repeat(201) });
+      assert.equal(ws.messages[0].type, 'error');
+      assert.equal(room.participants.length, 0);
+    });
+
     it('deduplicates when the same participant joins again', async () => {
       const room = createRoom('planning-poker', null);
       const ws = mockWs('p1');
@@ -264,6 +287,23 @@ describe('handlers', () => {
       await handleMessage(ws, room, { type: 'join', name: 'Alice' });
       await handleMessage(ws, room, { type: 'add_item', label: '  Story B  ' });
       assert.equal(room.items[0].label, 'Story B');
+    });
+
+    it('strips HTML tags from item label', async () => {
+      const room = createRoom('bucket', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: '<b>Bold</b> story' });
+      assert.equal(room.items[0].label, 'Bold story');
+    });
+
+    it('errors when label is only HTML tags', async () => {
+      const room = createRoom('bucket', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: '<script>alert(1)</script>' });
+      assert.ok(ws.messages.some(m => m.type === 'error'));
+      assert.equal(room.items.length, 0);
     });
 
     it('errors when item count is at the 200-item limit', async () => {
