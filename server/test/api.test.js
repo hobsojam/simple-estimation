@@ -139,6 +139,19 @@ describe('DELETE /api/rooms/:id', () => {
     assert.ok(getRoom(createRes.body.id));
   });
 
+  it('returns 403 when PIN is required and request has no body', async () => {
+    const createRes = await request(app)
+      .post('/api/rooms')
+      .send({ type: 'planning-poker', pin: 'admin' });
+
+    const res = await request(app)
+      .delete(`/api/rooms/${createRes.body.id}`);
+
+    assert.equal(res.status, 403);
+    assert.equal(res.body.error, 'PIN required');
+    assert.ok(getRoom(createRes.body.id));
+  });
+
   it('returns 403 for an incorrect PIN', async () => {
     const createRes = await request(app)
       .post('/api/rooms')
