@@ -110,6 +110,10 @@ app.delete('/api/rooms/:id', async (req, res) => {
   res.status(204).end();
 });
 
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 app.get('/{*path}', staticFallbackLimiter, (req, res) => {
   res.sendFile(path.resolve(STATIC_DIR, 'index.html'));
 });
