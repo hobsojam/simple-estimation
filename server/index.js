@@ -82,7 +82,7 @@ app.delete('/api/rooms/:id', async (req, res) => {
   }
 
   if (room.pinHash !== null) {
-    const { pin } = req.body;
+    const pin = req.body?.pin;
     if (!pin) {
       return res.status(403).json({ error: 'PIN required' });
     }

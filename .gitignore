@@ -5,6 +5,8 @@ client/dist/
 .env
 *.local
 .claude/
+.codex/
+AGENTS.md
 .mcp.json
 e2e/test-results/
 e2e/playwright-report/
