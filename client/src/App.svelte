@@ -11,6 +11,7 @@
   let pendingJoin = null;
   let joinSent = false;
   let createError = null;
+  let demoMode = false;
 
   function getUrlParams() {
     const params = new URLSearchParams(window.location.search);
@@ -28,7 +29,20 @@
     window.history.pushState({}, '', window.location.pathname);
   }
 
+  async function loadConfig() {
+    try {
+      const res = await fetch('/api/config');
+      if (res.ok) {
+        const config = await res.json();
+        demoMode = config.demoMode === true;
+      }
+    } catch {
+      demoMode = false;
+    }
+  }
+
   onMount(() => {
+    loadConfig();
     const { roomId } = getUrlParams();
     if (roomId) {
       pendingJoin = { roomId };
@@ -154,6 +168,12 @@
 </svelte:head>
 
 <div class="app">
+  {#if demoMode}
+    <div class="demo-banner" role="status">
+      Demo only. Data will be deleted after a few minutes of inactivity on the free hosting plan. Do not enter real names or real project items.
+    </div>
+  {/if}
+
   {#if page === 'home'}
     <JoinForm oncreate={handleCreate} onjoin={handleJoin} />
     {#if createError}
@@ -236,6 +256,16 @@
 
   .app {
     min-height: 100vh;
+  }
+
+  .demo-banner {
+    padding: 10px 24px;
+    background: #fef3c7;
+    border-bottom: 1px solid #f59e0b;
+    color: #713f12;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
   }
 
   .create-error {

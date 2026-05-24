@@ -204,6 +204,7 @@ cd e2e && npm run test:ui
 | `PORT` | `3000` | HTTP and WebSocket listen port |
 | `STATIC_DIR` | `./public` | Directory to serve static files from |
 | `ROOM_TTL_DAYS` | `7` | Days of inactivity before a room is automatically deleted |
+| `DEMO_MODE` | `false` | Set to `true` to show the public demo warning banner |
 
 Rooms are swept hourly. A room's inactivity timer resets on any vote, item move, add, reveal, or round reset. Participants joining or leaving does not count as activity.
 

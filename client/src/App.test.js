@@ -26,8 +26,15 @@ const baseRoom = {
   revealed: false,
 };
 
-function mockFetch({ createResponse } = {}) {
+function mockFetch({ createResponse, configResponse } = {}) {
   const fetchMock = vi.fn(async (url, options = {}) => {
+    if (url === '/api/config') {
+      return configResponse ?? {
+        ok: true,
+        json: async () => ({ demoMode: false }),
+      };
+    }
+
     if (url === '/api/rooms' && options.method === 'POST') {
       if (createResponse instanceof Error) throw createResponse;
       return createResponse ?? {
@@ -74,6 +81,21 @@ afterEach(() => {
 });
 
 describe('App.svelte page state machine', () => {
+  it('shows the demo banner when demo mode is enabled', async () => {
+    mockFetch({
+      configResponse: {
+        ok: true,
+        json: async () => ({ demoMode: true }),
+      },
+    });
+
+    const { findByRole } = render(App);
+
+    const banner = await findByRole('status');
+    expect(banner).toHaveTextContent('Demo only');
+    expect(banner).toHaveTextContent('Data will be deleted after a few minutes of inactivity');
+  });
+
   it('mounts on the home page without URL params', () => {
     const { getByRole } = render(App);
 
