@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { shortText, longText } = require('../validate');
+const { shortText } = require('../validate');
 
 describe('shortText', () => {
   it('returns null for undefined', () => {
@@ -52,23 +52,13 @@ describe('shortText', () => {
   it('coerces non-string values', () => {
     assert.equal(shortText(42), '42');
   });
-});
 
-describe('longText', () => {
-  it('returns null for undefined', () => {
-    assert.equal(longText(undefined), null);
+  it('handles closing tag with whitespace (e.g. </script >)', () => {
+    assert.equal(shortText('<script>x</script >Alice'), 'Alice');
   });
 
-  it('strips HTML tags', () => {
-    assert.equal(longText('<p>Hello</p>'), 'Hello');
-  });
-
-  it('returns null when input exceeds 2000 chars', () => {
-    assert.equal(longText('a'.repeat(2001)), null);
-  });
-
-  it('accepts a string exactly at 2000 chars', () => {
-    const s = 'a'.repeat(2000);
-    assert.equal(longText(s), s);
+  it('handles nested bypass attempt', () => {
+    const result = shortText('<<script>script>alert(1)</script>/script>');
+    assert.equal(result, null);
   });
 });

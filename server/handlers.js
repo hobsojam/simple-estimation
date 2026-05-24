@@ -62,11 +62,6 @@ function validateItemLabel(ws, room, label) {
     return null;
   }
 
-  if (trimmedLabel.length > 200) {
-    sendError(ws, 'Item label must be 200 characters or fewer');
-    return null;
-  }
-
   if (room.items.length >= 200) {
     sendError(ws, 'Room has reached the maximum number of items');
     return null;
