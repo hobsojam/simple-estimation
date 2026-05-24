@@ -13,10 +13,10 @@ jobs:
     name: Server mutation tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: main
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -32,7 +32,7 @@ jobs:
           mkdir -p artifacts
           cp server/coverage/lcov.info artifacts/lcov.info
           cp server/reports/mutation/mutation.json artifacts/mutation.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: server-reports
           path: artifacts/
@@ -41,10 +41,10 @@ jobs:
     name: Client mutation tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: main
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -62,7 +62,7 @@ jobs:
           mkdir -p artifacts
           cp client/reports/coverage/lcov.info artifacts/lcov.info
           cp client/reports/mutation/mutation.json artifacts/mutation.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: client-reports
           path: artifacts/
@@ -72,18 +72,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: [server-mutation, client-mutation]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: main
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: server-reports
           path: reports/server
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: client-reports
           path: reports/client
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.10'
       - run: pip install git+https://github.com/hobsojam/test-analysis.git@main
