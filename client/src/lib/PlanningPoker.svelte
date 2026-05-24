@@ -42,6 +42,14 @@
     wasRevealed = !!state?.revealed;
   }
 
+  function tickTimer() {
+    remaining = Math.max(0, Math.ceil((trackedEndsAt - Date.now()) / 1000));
+    if (remaining <= 0) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+  }
+
   // Sync client-side countdown with server timer state
   $: {
     const endsAt = state?.timer?.endsAt ?? null;
@@ -53,13 +61,7 @@
       }
       if (endsAt !== null) {
         remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
-        timerId = setInterval(() => {
-          remaining = Math.max(0, Math.ceil((trackedEndsAt - Date.now()) / 1000));
-          if (remaining <= 0) {
-            clearInterval(timerId);
-            timerId = null;
-          }
-        }, 250);
+        timerId = setInterval(tickTimer, 250);
       } else {
         remaining = null;
       }
@@ -159,7 +161,7 @@
       <aside class="sidebar">
         <h3>Participants</h3>
         <ul class="participant-list">
-          {#each state.participants as p}
+          {#each state.participants as p (p.id)}
             <li class="participant" class:voted={p.voted}>
               <span class="name">{p.name}</span>
               {#if p.id === state.facilitatorId}
@@ -204,7 +206,7 @@
           <div class="results">
             <h3>Results</h3>
             <div class="vote-grid">
-              {#each state.participants.filter(p => p.vote !== null) as p}
+              {#each state.participants.filter(p => p.vote !== null) as p (p.id)}
                 <div class="vote-card" class:outlier={p.vote !== majority}>
                   <div class="vote-value">{p.vote}</div>
                   <div class="vote-name">{p.name}</div>
@@ -220,7 +222,7 @@
                 <p class="majority-hint">Majority vote: <strong>{majority}</strong></p>
               {/if}
               <div class="estimate-picker" role="group" aria-label="Choose estimate">
-                {#each CARDS as card}
+                {#each CARDS as card (card)}
                   <button
                     class="estimate-btn"
                     class:selected={finaliseEstimate === card}
@@ -244,7 +246,7 @@
         <div class="card-selector">
           <h3>Your vote</h3>
           <div class="cards">
-            {#each CARDS as card}
+            {#each CARDS as card (card)}
               <Card
                 value={card}
                 selected={selectedCard === card}
@@ -340,7 +342,7 @@
           <section class="backlog-group">
             <h4>Pending</h4>
             <ul class="item-list">
-              {#each pendingItems as item}
+              {#each pendingItems as item (item.id)}
                 <li class="backlog-item">
                   <span class="item-label">{item.label}</span>
                   {#if isFacilitator}
@@ -365,7 +367,7 @@
           <section class="backlog-group">
             <h4>Done</h4>
             <ul class="item-list">
-              {#each doneItems as item}
+              {#each doneItems as item (item.id)}
                 <li class="backlog-item done-item">
                   <span class="item-label">{item.label}</span>
                   <span class="estimate-badge">{item.estimate}</span>

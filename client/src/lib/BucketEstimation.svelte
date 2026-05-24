@@ -26,7 +26,7 @@
   }
 
   $: unsized = state ? state.items.filter(i => i.position === null) : [];
-  $: bucketed = (bucket) => state ? state.items.filter(i => i.position === bucket) : [];
+  function bucketed(bucket) { return state ? state.items.filter(i => i.position === bucket) : []; }
 
   function addItem() {
     const label = newItemLabel.trim();
@@ -124,7 +124,7 @@
         {/each}
       </div>
 
-      {#each BUCKETS as bucket}
+      {#each BUCKETS as bucket (bucket)}
         <div
           class="column"
           on:dragover={onDragOver}
