@@ -6,6 +6,14 @@ const { clearRooms, getRoom } = require('../rooms');
 
 beforeEach(() => clearRooms());
 
+describe('GET /health', () => {
+  it('returns 200 with status ok', async () => {
+    const res = await request(app).get('/health');
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body, { status: 'ok' });
+  });
+});
+
 describe('POST /api/rooms', () => {
   it('returns 200 with an id for a valid type', async () => {
     const res = await request(app)
