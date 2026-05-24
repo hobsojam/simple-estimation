@@ -1,14 +1,15 @@
-const SCRIPT_RE = /<script\b[^>]*>[\s\S]*?<\/script\s*>/gi;
-const STYLE_RE = /<style\b[^>]*>[\s\S]*?<\/style\s*>/gi;
+const SCRIPT_RE = /<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi;
+const STYLE_RE = /<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi;
 const TAG_RE = /<[^>]*>/g;
 
 function stripTags(value) {
-  const s = String(value).slice(0, 50_000);
-  return s
-    .replace(SCRIPT_RE, '')
-    .replace(STYLE_RE, '')
-    .replace(TAG_RE, '')
-    .replace(/</g, '');
+  let s = String(value).slice(0, 50_000);
+  let prev;
+  do {
+    prev = s;
+    s = s.replace(SCRIPT_RE, '').replace(STYLE_RE, '');
+  } while (s !== prev);
+  return s.replace(TAG_RE, '').replace(/</g, '');
 }
 
 function shortText(value, maxLen = 200) {
