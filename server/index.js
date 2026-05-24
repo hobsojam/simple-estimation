@@ -11,6 +11,7 @@ const { sanitizeRoom } = require('./sanitize');
 
 const PORT = process.env.PORT || 3000;
 const STATIC_DIR = process.env.STATIC_DIR || './public';
+const DEMO_MODE = process.env.DEMO_MODE === 'true';
 
 const app = express();
 app.use(express.json());
@@ -49,6 +50,10 @@ const staticFallbackLimiter = rateLimit({
 });
 
 app.use('/api', apiLimiter);
+
+app.get('/api/config', (req, res) => {
+  res.json({ demoMode: DEMO_MODE });
+});
 
 app.post('/api/rooms', createRoomLimiter, async (req, res) => {
   const { type, pin, accessPin, name } = req.body;

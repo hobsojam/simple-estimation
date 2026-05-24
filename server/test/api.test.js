@@ -78,6 +78,14 @@ describe('HTTP security headers', () => {
   });
 });
 
+describe('GET /api/config', () => {
+  it('returns demoMode false by default', async () => {
+    const res = await request(app).get('/api/config');
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body, { demoMode: false });
+  });
+});
+
 describe('GET /api/rooms', () => {
   it('includes name and pin protections in room listing', async () => {
     await request(app).post('/api/rooms').send({
