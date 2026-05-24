@@ -4,6 +4,12 @@
 
 A lightweight, self-hosted web tool for agile estimation. Supports Planning Poker and two Magic Estimation variants.
 
+## Demo
+
+A public demo is available at <https://simple-estimation.onrender.com/>.
+
+This instance is for demonstration only. We make no promise that it will be available, retained, secure, or suitable for real work. Do not use it for actual estimation sessions, and do not enter real data, including personally identifying information such as real names or real project items.
+
 ## Objectives
 
 - Real-time collaborative estimation for distributed teams
