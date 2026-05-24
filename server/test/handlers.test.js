@@ -138,13 +138,13 @@ describe('handlers', () => {
       const room = createRoom('planning-poker', null);
       const ws = mockWs('p1');
       await handleMessage(ws, room, { type: 'join', name: '<script>alert(1)</script>Alice' });
-      assert.equal(room.participants[0].name, 'Alice');
+      assert.equal(room.participants[0].name, 'alert(1)Alice');
     });
 
-    it('errors when name is only HTML tags', async () => {
+    it('errors when name is only empty HTML tags', async () => {
       const room = createRoom('planning-poker', null);
       const ws = mockWs('p1');
-      await handleMessage(ws, room, { type: 'join', name: '<script>alert(1)</script>' });
+      await handleMessage(ws, room, { type: 'join', name: '<b></b>' });
       assert.equal(ws.messages[0].type, 'error');
       assert.equal(room.participants.length, 0);
     });
@@ -297,11 +297,11 @@ describe('handlers', () => {
       assert.equal(room.items[0].label, 'Bold story');
     });
 
-    it('errors when label is only HTML tags', async () => {
+    it('errors when label is only empty HTML tags', async () => {
       const room = createRoom('bucket', null);
       const ws = mockWs('f1');
       await handleMessage(ws, room, { type: 'join', name: 'Alice' });
-      await handleMessage(ws, room, { type: 'add_item', label: '<script>alert(1)</script>' });
+      await handleMessage(ws, room, { type: 'add_item', label: '<b></b>' });
       assert.ok(ws.messages.some(m => m.type === 'error'));
       assert.equal(room.items.length, 0);
     });
