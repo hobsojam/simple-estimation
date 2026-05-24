@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "node --test test/rooms.test.js test/handlers.test.js test/api.test.js test/sanitize.test.js test/sweep.test.js test/ws.test.js"
+    "test": "node --test test/rooms.test.js test/handlers.test.js test/api.test.js test/sanitize.test.js test/sweep.test.js test/ws.test.js test/validate.test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

@@ -67,12 +67,28 @@ describe('POST /api/rooms', () => {
     assert.ok(res.body.id);
   });
 
-  it('trims and truncates name to 200 chars', async () => {
-    const longName = 'a'.repeat(250);
+  it('accepts name up to 200 chars', async () => {
     const res = await request(app)
       .post('/api/rooms')
-      .send({ type: 'planning-poker', name: '  ' + longName + '  ' });
+      .send({ type: 'planning-poker', name: 'a'.repeat(200) });
     assert.equal(res.status, 200);
+  });
+
+  it('creates room without name when name exceeds 200 chars', async () => {
+    const res = await request(app)
+      .post('/api/rooms')
+      .send({ type: 'planning-poker', name: 'a'.repeat(201) });
+    assert.equal(res.status, 200);
+  });
+
+  it('strips HTML tags from room name', async () => {
+    const res = await request(app)
+      .post('/api/rooms')
+      .send({ type: 'planning-poker', name: '<b>Sprint</b> 42' });
+    assert.equal(res.status, 200);
+    const { getRoom } = require('../rooms');
+    const room = getRoom(res.body.id);
+    assert.equal(room.name, 'Sprint 42');
   });
 });
 

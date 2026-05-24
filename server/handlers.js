@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const { shortText } = require('./validate');
 const {
   upsertParticipant,
   setFacilitator,
@@ -55,14 +56,9 @@ function parseVoteValue(ws, value, requiredMessage, invalidPrefix) {
 }
 
 function validateItemLabel(ws, room, label) {
-  if (!label || typeof label !== 'string' || !label.trim()) {
+  const trimmedLabel = shortText(label);
+  if (!trimmedLabel) {
     sendError(ws, 'Item label required');
-    return null;
-  }
-
-  const trimmedLabel = label.trim();
-  if (trimmedLabel.length > 200) {
-    sendError(ws, 'Item label must be 200 characters or fewer');
     return null;
   }
 
@@ -123,7 +119,8 @@ async function verifyInitialFacilitatorPin(ws, room, data, noFacilitator, pinReq
 }
 
 async function handleJoin(ws, room, data) {
-  if (!data.name || typeof data.name !== 'string' || !data.name.trim()) {
+  const participantName = shortText(data.name);
+  if (!participantName) {
     // Stryker disable next-line StringLiteral
     console.log(`[WS] Join failed: name missing or invalid`);
     return sendError(ws, 'Name is required');
@@ -132,14 +129,12 @@ async function handleJoin(ws, room, data) {
   if (!(await ensureAccess(ws, room, data))) return;
 
   // Stryker disable next-line StringLiteral
-  console.log(`[WS] Join success for ${data.name} (${ws.participantId}) in ${room.id}`);
+  console.log(`[WS] Join success for ${participantName} (${ws.participantId}) in ${room.id}`);
 
   const noFacilitator = !room.facilitatorId;
   const pinRequired = !!room.pinHash;
   const facilitatorPinValid = await verifyInitialFacilitatorPin(ws, room, data, noFacilitator, pinRequired);
   if (facilitatorPinValid === null) return;
-
-  const participantName = data.name.trim();
   upsertParticipant(room.id, { id: ws.participantId, name: participantName, vote: null });
 
   if (!noFacilitator) return;
