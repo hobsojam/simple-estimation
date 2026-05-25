@@ -62,6 +62,12 @@ app.post('/api/rooms', createRoomLimiter, async (req, res) => {
   if (!type || !validTypes.includes(type)) {
     return res.status(400).json({ error: 'Invalid room type' });
   }
+  if (pin && String(pin).length > 64) {
+    return res.status(400).json({ error: 'PIN must be 64 characters or fewer' });
+  }
+  if (accessPin && String(accessPin).length > 64) {
+    return res.status(400).json({ error: 'Access PIN must be 64 characters or fewer' });
+  }
   const trimmedName = shortText(name);
   const pinHash = pin ? await bcrypt.hash(String(pin), 10) : null;
   const accessPinHash = accessPin ? await bcrypt.hash(String(accessPin), 10) : null;
@@ -91,6 +97,9 @@ app.delete('/api/rooms/:id', async (req, res) => {
     const pin = req.body?.pin;
     if (!pin) {
       return res.status(403).json({ error: 'PIN required' });
+    }
+    if (String(pin).length > 64) {
+      return res.status(403).json({ error: 'Incorrect PIN' });
     }
     const match = await bcrypt.compare(String(pin), room.pinHash);
     if (!match) {
