@@ -241,6 +241,11 @@ function handleConnection(ws, req) {
       } else {
         clearRoomTimer(roomId);
       }
+    }).catch((err) => {
+      console.error(`[WS] Unhandled error in message chain (${ws.participantId ?? 'unknown'}):`, err.message);
+      if (ws.readyState === ws.OPEN) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Internal server error' }));
+      }
     });
   });
 
