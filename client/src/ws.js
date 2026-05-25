@@ -79,6 +79,7 @@ function openConnection() {
 
 export function send(message) {
   if (socket?.readyState === WebSocket.OPEN) {
+    wsError.set(null);
     socket.send(JSON.stringify(message));
   }
 }
