@@ -84,7 +84,7 @@
     </div>
 
     {#if $wsError}
-      <div class="error">{$wsError}</div>
+      <div class="error" role="alert">{$wsError}</div>
     {/if}
 
     {#if isFacilitator}
