@@ -165,6 +165,9 @@ function handleVote(ws, room, data) {
 }
 
 function handleMoveItem(ws, room, data) {
+  if (!room.participants.some(p => p.id === ws.participantId)) {
+    return sendError(ws, 'Join before moving items');
+  }
   if (!data.itemId) return sendError(ws, 'itemId required');
   if (data.position === undefined) return sendError(ws, 'position required');
 
