@@ -1,13 +1,17 @@
 FROM node:26-alpine AS builder
-WORKDIR /app/client
-COPY client/ .
-RUN npm ci && npm run build
+WORKDIR /app
+COPY client/package*.json ./client/
+RUN cd client && npm ci
+COPY client/ ./client/
+COPY shared/ ./shared/
+RUN cd client && npm run build
 
 FROM node:26-alpine AS runner
-WORKDIR /app
+WORKDIR /app/server
 COPY server/package*.json ./
 RUN npm ci --omit=dev
 COPY --chown=node:node server/ ./
+COPY --chown=node:node shared/ ../shared/
 COPY --from=builder --chown=node:node /app/client/dist ./public
 USER node
 EXPOSE 3000
