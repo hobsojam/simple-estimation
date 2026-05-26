@@ -1,6 +1,7 @@
 const { EventEmitter } = require('node:events');
 const { describe, it, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
+const { WEBSOCKET_ERRORS } = require('../../shared/errors.json');
 const {
   broadcastState,
   clearRoomTimer,
@@ -104,23 +105,29 @@ describe('broadcastState', () => {
 });
 
 describe('handleConnection', () => {
-  it('closes with 1008 when roomId is missing', () => {
+  it('closes with a shared error code when roomId is missing', () => {
     const ws = new FakeSocket();
 
     handleConnection(ws, requestFor('/ws'));
 
-    assert.deepEqual(ws.closed, [{ code: 1008, reason: 'roomId required' }]);
+    assert.deepEqual(ws.closed, [{
+      code: WEBSOCKET_ERRORS.ROOM_ID_REQUIRED.code,
+      reason: WEBSOCKET_ERRORS.ROOM_ID_REQUIRED.description,
+    }]);
   });
 
-  it('closes with 1008 when the room is not found', () => {
+  it('closes with a shared error code when the room is not found', () => {
     const ws = new FakeSocket();
 
     handleConnection(ws, requestFor('/ws?roomId=missing'));
 
-    assert.deepEqual(ws.closed, [{ code: 1008, reason: 'Room not found' }]);
+    assert.deepEqual(ws.closed, [{
+      code: WEBSOCKET_ERRORS.ROOM_NOT_FOUND.code,
+      reason: WEBSOCKET_ERRORS.ROOM_NOT_FOUND.description,
+    }]);
   });
 
-  it('closes with 1008 when the room is full', () => {
+  it('closes with a shared error code when the room is full', () => {
     const room = createRoom('bucket', null);
     for (let i = 0; i < 100; i += 1) {
       addParticipant(room.id, { id: `p${i}`, name: `User ${i}`, vote: null });
@@ -129,7 +136,10 @@ describe('handleConnection', () => {
 
     handleConnection(ws, requestFor(`/ws?roomId=${room.id}`));
 
-    assert.deepEqual(ws.closed, [{ code: 1008, reason: 'Room is full' }]);
+    assert.deepEqual(ws.closed, [{
+      code: WEBSOCKET_ERRORS.ROOM_FULL.code,
+      reason: WEBSOCKET_ERRORS.ROOM_FULL.description,
+    }]);
   });
 
   it('sets participantId from the query param and authorizes rooms without access pins', () => {

@@ -5,6 +5,7 @@ const { WebSocketServer } = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
+const { WEBSOCKET_ERRORS } = require('../shared/errors.json');
 const { createRoom, getRoom, getAllRooms, removeParticipant, deleteRoom, revealVotes, clearTimer } = require('./rooms');
 const { handleMessage } = require('./handlers');
 const { sanitizeRoom } = require('./sanitize');
@@ -171,24 +172,28 @@ function scheduleAutoReveal(roomId, endsAt) {
   roomTimers.set(roomId, handle);
 }
 
+function closeWithError(ws, error) {
+  ws.close(error.code, error.description);
+}
+
 function handleConnection(ws, req) {
   const url = new URL(req.url, `http://localhost`);
   const roomId = url.searchParams.get('roomId');
   const participantId = url.searchParams.get('participantId');
 
   if (!roomId) {
-    ws.close(1008, 'roomId required');
+    closeWithError(ws, WEBSOCKET_ERRORS.ROOM_ID_REQUIRED);
     return;
   }
 
   const room = getRoom(roomId);
   if (!room) {
-    ws.close(1008, 'Room not found');
+    closeWithError(ws, WEBSOCKET_ERRORS.ROOM_NOT_FOUND);
     return;
   }
 
   if (room.participants.length >= 100) {
-    ws.close(1008, 'Room is full');
+    closeWithError(ws, WEBSOCKET_ERRORS.ROOM_FULL);
     return;
   }
 
@@ -210,7 +215,7 @@ function handleConnection(ws, req) {
     const timestamps = wsMessageTimestamps.get(ws) || [];
     const recent = timestamps.filter(t => now - t < 1000);
     if (recent.length >= 30) {
-      ws.close(1008, 'Rate limit exceeded');
+      closeWithError(ws, WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED);
       return;
     }
     wsMessageTimestamps.set(ws, [...recent, now]);
@@ -227,7 +232,7 @@ function handleConnection(ws, req) {
       const currentRoom = getRoom(roomId);
       if (!currentRoom) {
         console.log(`[WS] Room not found: ${roomId}`);
-        ws.close(1008, 'Room not found');
+        closeWithError(ws, WEBSOCKET_ERRORS.ROOM_NOT_FOUND);
         return;
       }
 

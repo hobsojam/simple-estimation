@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { WEBSOCKET_ERRORS } from '../../shared/errors.json';
 
 export const roomState = writable(null);
 export const wsError = writable(null);
@@ -10,6 +11,12 @@ let currentRoomId = null;
 let intentionalClose = false;
 
 const SESSION_KEY = 'participantId';
+const TERMINAL_CLOSE_MESSAGES = {
+  [WEBSOCKET_ERRORS.ROOM_ID_REQUIRED.code]: WEBSOCKET_ERRORS.ROOM_ID_REQUIRED.description,
+  [WEBSOCKET_ERRORS.ROOM_NOT_FOUND.code]: WEBSOCKET_ERRORS.ROOM_NOT_FOUND.description,
+  [WEBSOCKET_ERRORS.ROOM_FULL.code]: WEBSOCKET_ERRORS.ROOM_FULL.description,
+  [WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.code]: WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.description,
+};
 
 function getOrCreateParticipantId() {
   let id = sessionStorage.getItem(SESSION_KEY);
@@ -59,8 +66,9 @@ function openConnection() {
 
   socket.addEventListener('close', (event) => {
     if (intentionalClose) return;
-    if (event.code === 1008) {
-      wsError.set('Room not found. The link may be expired or incorrect.');
+    const terminalMessage = TERMINAL_CLOSE_MESSAGES[event.code];
+    if (terminalMessage) {
+      wsError.set(terminalMessage);
       return;
     }
     if (retryCount < 3) {

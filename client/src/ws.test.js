@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { get } from 'svelte/store';
+import { WEBSOCKET_ERRORS } from '../../shared/errors.json';
 
 // FakeWebSocket captures event listeners so tests can fire them manually.
 class FakeWebSocket {
@@ -119,11 +120,29 @@ describe('ws.js', () => {
   });
 
   describe('close handler', () => {
-    it('sets wsError and does not retry on close code 1008', () => {
+    it('sets wsError and does not retry when the room is not found', () => {
       vi.useFakeTimers();
       connect('room-1');
-      FakeWebSocket._latest.fireClose(1008, 'Room not found');
-      expect(get(wsError)).toMatch(/Room not found/);
+      FakeWebSocket._latest.fireClose(WEBSOCKET_ERRORS.ROOM_NOT_FOUND.code, WEBSOCKET_ERRORS.ROOM_NOT_FOUND.description);
+      expect(get(wsError)).toBe(WEBSOCKET_ERRORS.ROOM_NOT_FOUND.description);
+      vi.advanceTimersByTime(5000);
+      expect(FakeWebSocket._instances.length).toBe(1);
+    });
+
+    it('sets wsError and does not retry when the room is full', () => {
+      vi.useFakeTimers();
+      connect('room-1');
+      FakeWebSocket._latest.fireClose(WEBSOCKET_ERRORS.ROOM_FULL.code, WEBSOCKET_ERRORS.ROOM_FULL.description);
+      expect(get(wsError)).toBe(WEBSOCKET_ERRORS.ROOM_FULL.description);
+      vi.advanceTimersByTime(5000);
+      expect(FakeWebSocket._instances.length).toBe(1);
+    });
+
+    it('sets wsError and does not retry after rate limiting', () => {
+      vi.useFakeTimers();
+      connect('room-1');
+      FakeWebSocket._latest.fireClose(WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.code, WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.description);
+      expect(get(wsError)).toBe(WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.description);
       vi.advanceTimersByTime(5000);
       expect(FakeWebSocket._instances.length).toBe(1);
     });
