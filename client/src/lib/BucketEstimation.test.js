@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, fireEvent } from '@testing-library/svelte';
+import { render, fireEvent, waitFor, within } from '@testing-library/svelte';
 import BucketEstimation from './BucketEstimation.svelte';
 import { roomState, send } from '../ws.js';
 
@@ -122,6 +122,33 @@ describe('BucketEstimation — Add Item bar', () => {
     await fireEvent.input(input, { target: { value: 'Story A' } });
     await fireEvent.click(getByRole('button', { name: 'Add Item' }));
     expect(input.value).toBe('');
+  });
+});
+
+describe('BucketEstimation — item placement', () => {
+  beforeEach(() => {
+    roomState.set(null);
+    send.mockClear();
+  });
+
+  it('keeps an item visible after state moves it into a bucket', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: null }],
+    });
+    const { getByRole } = render(BucketEstimation);
+
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: 'M' }],
+    });
+
+    const targetColumn = getByRole('region', { name: 'M' });
+    const sourceColumn = getByRole('region', { name: 'Unsized items' });
+    await waitFor(() => {
+      expect(within(targetColumn).getByRole('button', { name: 'Story A' })).toBeInTheDocument();
+    });
+    expect(within(sourceColumn).queryByRole('button', { name: 'Story A' })).not.toBeInTheDocument();
   });
 });
 

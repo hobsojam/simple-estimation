@@ -12,6 +12,10 @@
   $: state = $roomState;
   $: isFacilitator = state && $myId && state.facilitatorId === $myId;
   $: placedItems = state ? state.items.filter(i => i.position !== null) : [];
+  $: columnsWithItems = FIBONACCI.map(fib => ({
+    fib,
+    items: state ? state.items.filter(i => i.position === String(fib)) : [],
+  }));
 
   function downloadCSV() {
     const blob = new Blob([buildCSV(placedItems.map(i => ({ label: i.label, estimate: i.position })))], { type: 'text/csv' });
@@ -26,7 +30,6 @@
   }
 
   $: unplaced = state ? state.items.filter(i => i.position === null) : [];
-  function inColumn(fib) { return state ? state.items.filter(i => i.position === String(fib)) : []; }
 
   function addItem() {
     const label = newItemLabel.trim();
@@ -130,17 +133,17 @@
       <div class="scale">
         <div class="scale-label">Relative effort — drag items to the appropriate column</div>
         <div class="columns">
-          {#each FIBONACCI as fib (fib)}
+          {#each columnsWithItems as column (column.fib)}
             <div
               class="fib-column"
               on:dragover={onDragOver}
-              on:drop={(e) => onDrop(e, fib)}
+              on:drop={(e) => onDrop(e, column.fib)}
               role="region"
-              aria-label={String(fib)}
+              aria-label={String(column.fib)}
             >
-              <div class="fib-header">{fib}</div>
+              <div class="fib-header">{column.fib}</div>
               <div class="fib-items">
-                {#each inColumn(fib) as item (item.id)}
+                {#each column.items as item (item.id)}
                   <div
                     class="item-card"
                     role="button"
