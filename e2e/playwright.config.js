@@ -27,7 +27,8 @@ module.exports = defineConfig({
       ...process.env,
       STATIC_DIR: path.join(__dirname, '..', 'client', 'dist'),
       PORT: '3000',
-      // E2E suite creates 21 rooms; default limit of 20/hr would 429 the last test
+      // E2E suite is intentionally API-heavy; default production limits can 429 later tests
+      API_RATE_LIMIT_MAX: '500',
       ROOM_RATE_LIMIT_MAX: '100',
     },
     port: 3000,

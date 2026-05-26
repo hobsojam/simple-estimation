@@ -30,7 +30,7 @@ app.use(express.static(path.resolve(STATIC_DIR)));
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: process.env.API_RATE_LIMIT_MAX ? Number.parseInt(process.env.API_RATE_LIMIT_MAX, 10) : 100,
   standardHeaders: true,
   legacyHeaders: false,
 });

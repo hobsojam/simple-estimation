@@ -12,6 +12,10 @@
   $: state = $roomState;
   $: isFacilitator = state && $myId && state.facilitatorId === $myId;
   $: sizedItems = state ? state.items.filter(i => i.position !== null) : [];
+  $: bucketsWithItems = BUCKETS.map(bucket => ({
+    bucket,
+    items: state ? state.items.filter(i => i.position === bucket) : [],
+  }));
 
   function downloadCSV() {
     const blob = new Blob([buildCSV(sizedItems.map(i => ({ label: i.label, estimate: i.position })))], { type: 'text/csv' });
@@ -26,7 +30,6 @@
   }
 
   $: unsized = state ? state.items.filter(i => i.position === null) : [];
-  function bucketed(bucket) { return state ? state.items.filter(i => i.position === bucket) : []; }
 
   function addItem() {
     const label = newItemLabel.trim();
@@ -124,16 +127,16 @@
         {/each}
       </div>
 
-      {#each BUCKETS as bucket (bucket)}
+      {#each bucketsWithItems as column (column.bucket)}
         <div
           class="column"
           on:dragover={onDragOver}
-          on:drop={(e) => onDrop(e, bucket)}
+          on:drop={(e) => onDrop(e, column.bucket)}
           role="region"
-          aria-label={bucket}
+          aria-label={column.bucket}
         >
-          <div class="column-header bucket-label">{bucket}</div>
-          {#each bucketed(bucket) as item (item.id)}
+          <div class="column-header bucket-label">{column.bucket}</div>
+          {#each column.items as item (item.id)}
             <div
               class="item-card"
               role="button"
