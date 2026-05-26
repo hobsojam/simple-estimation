@@ -117,6 +117,14 @@ cd client && npm install && npm run dev
 
 Vite proxies WebSocket connections to `localhost:3000` so the dev server works against the local Node backend without CORS issues.
 
+When changing client UI or any Svelte source, verify the production build before opening a PR:
+
+```bash
+cd client && npm run build
+```
+
+Do not commit generated static bundles. Docker and CI build them from `client/dist`; for local direct-server checks, run the server with `STATIC_DIR` pointing at `client/dist`.
+
 ## Docker
 
 ```bash

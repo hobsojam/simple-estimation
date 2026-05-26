@@ -3,6 +3,7 @@ import { render, fireEvent, waitFor } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import App from './App.svelte';
 import { roomState, wsError, connect, disconnect, send } from './ws.js';
+import clientPackage from '../package.json';
 
 vi.mock('./ws.js', async () => {
   const { writable } = await import('svelte/store');
@@ -102,6 +103,12 @@ describe('App.svelte page state machine', () => {
     expect(getByRole('tablist')).toBeInTheDocument();
     expect(getByRole('tab', { name: 'Join Room' })).toHaveAttribute('aria-selected', 'true');
     expect(connect).not.toHaveBeenCalled();
+  });
+
+  it('shows the app version discreetly', () => {
+    const { getByLabelText } = render(App);
+
+    expect(getByLabelText(`Application version ${clientPackage.version}`)).toHaveTextContent(`v${clientPackage.version}`);
   });
 
   it('mounts in joining state and connects when ?room=<id> is present', async () => {
