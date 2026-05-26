@@ -6,12 +6,14 @@
   import PlanningPoker from './lib/PlanningPoker.svelte';
   import BucketEstimation from './lib/BucketEstimation.svelte';
   import RelativeEstimation from './lib/RelativeEstimation.svelte';
+  import clientPackage from '../package.json';
 
   let page = 'home';
   let pendingJoin = null;
   let joinSent = false;
   let createError = null;
   let demoMode = false;
+  const appVersion = clientPackage.version;
 
   function getUrlParams() {
     const params = new URLSearchParams(window.location.search);
@@ -168,6 +170,8 @@
 </svelte:head>
 
 <div class="app">
+  <div class="version-badge" aria-label={`Application version ${appVersion}`}>v{appVersion}</div>
+
   {#if demoMode}
     <div class="demo-banner" role="status">
       Demo only. Data will be deleted after a few minutes of inactivity on the free hosting plan. Do not enter real names or real project items.
@@ -256,6 +260,21 @@
 
   .app {
     min-height: 100vh;
+  }
+
+  .version-badge {
+    position: fixed;
+    right: 12px;
+    bottom: 10px;
+    z-index: 10;
+    color: #64748b;
+    background: rgba(248, 250, 252, 0.86);
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    pointer-events: none;
   }
 
   .demo-banner {

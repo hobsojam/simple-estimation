@@ -2,6 +2,7 @@ node_modules/
 coverage/
 reports/
 client/dist/
+server/public/
 .env
 *.local
 .claude/

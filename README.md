@@ -160,6 +160,12 @@ cd server && npm install && node index.js
 cd client && npm install && npm run dev
 ```
 
+If you change client UI and plan to run the Express server without the Vite dev server, rebuild the client and point `STATIC_DIR` at `client/dist`. Do not commit generated static bundles; Docker and CI should create them from source.
+
+## Versioning
+
+The UI shows the application version from `client/package.json` as a discreet `vX.Y.Z` badge. When cutting a release or publishing a user-visible change set, bump both `client/package.json` and `server/package.json` together and commit the matching lock-file updates. Generated static bundles should be built by Docker or CI, not committed.
+
 ## Testing
 
 There are three independent test suites.
