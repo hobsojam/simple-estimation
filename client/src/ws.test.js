@@ -46,7 +46,7 @@ class FakeWebSocket {
   }
 }
 
-let connect, disconnect, send, roomState, wsError, myId;
+let connect, disconnect, send, roomState, wsError, fatalWsError, myId;
 
 async function freshModule() {
   vi.resetModules();
@@ -56,6 +56,7 @@ async function freshModule() {
   send = mod.send;
   roomState = mod.roomState;
   wsError = mod.wsError;
+  fatalWsError = mod.fatalWsError;
   myId = mod.myId;
 }
 
@@ -105,10 +106,11 @@ describe('ws.js', () => {
       expect(get(roomState)).toEqual({ id: 'r1', type: 'bucket' });
     });
 
-    it('routes error messages to the wsError store', () => {
+    it('routes error messages to wsError as transient errors', () => {
       connect('room-1');
       FakeWebSocket._latest.fireMessage({ type: 'error', message: 'Something went wrong' });
       expect(get(wsError)).toBe('Something went wrong');
+      expect(get(fatalWsError)).toBeNull();
     });
 
     it('silently ignores malformed JSON', () => {
@@ -120,29 +122,32 @@ describe('ws.js', () => {
   });
 
   describe('close handler', () => {
-    it('sets wsError and does not retry when the room is not found', () => {
+    it('sets fatalWsError and does not retry when the room is not found', () => {
       vi.useFakeTimers();
       connect('room-1');
       FakeWebSocket._latest.fireClose(WEBSOCKET_ERRORS.ROOM_NOT_FOUND.code, WEBSOCKET_ERRORS.ROOM_NOT_FOUND.description);
       expect(get(wsError)).toBe(WEBSOCKET_ERRORS.ROOM_NOT_FOUND.description);
+      expect(get(fatalWsError)).toBe(WEBSOCKET_ERRORS.ROOM_NOT_FOUND.description);
       vi.advanceTimersByTime(5000);
       expect(FakeWebSocket._instances.length).toBe(1);
     });
 
-    it('sets wsError and does not retry when the room is full', () => {
+    it('sets fatalWsError and does not retry when the room is full', () => {
       vi.useFakeTimers();
       connect('room-1');
       FakeWebSocket._latest.fireClose(WEBSOCKET_ERRORS.ROOM_FULL.code, WEBSOCKET_ERRORS.ROOM_FULL.description);
       expect(get(wsError)).toBe(WEBSOCKET_ERRORS.ROOM_FULL.description);
+      expect(get(fatalWsError)).toBe(WEBSOCKET_ERRORS.ROOM_FULL.description);
       vi.advanceTimersByTime(5000);
       expect(FakeWebSocket._instances.length).toBe(1);
     });
 
-    it('sets wsError and does not retry after rate limiting', () => {
+    it('sets fatalWsError and does not retry after rate limiting', () => {
       vi.useFakeTimers();
       connect('room-1');
       FakeWebSocket._latest.fireClose(WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.code, WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.description);
       expect(get(wsError)).toBe(WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.description);
+      expect(get(fatalWsError)).toBe(WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.description);
       vi.advanceTimersByTime(5000);
       expect(FakeWebSocket._instances.length).toBe(1);
     });
@@ -179,21 +184,22 @@ describe('ws.js', () => {
       expect(FakeWebSocket._instances.length).toBe(3);
     });
 
-    it('sets wsError "Connection lost" after 3 retries', async () => {
+    it('sets fatalWsError after 3 retries', async () => {
       vi.useFakeTimers();
       connect('room-1');
-      // Retry 0 → delay 1s
+      // Retry 0 -> delay 1s
       FakeWebSocket._latest.fireClose(1006);
       await vi.advanceTimersByTimeAsync(1000);
-      // Retry 1 → delay 2s
+      // Retry 1 -> delay 2s
       FakeWebSocket._latest.fireClose(1006);
       await vi.advanceTimersByTimeAsync(2000);
-      // Retry 2 → delay 4s
+      // Retry 2 -> delay 4s
       FakeWebSocket._latest.fireClose(1006);
       await vi.advanceTimersByTimeAsync(4000);
       // 3rd close exhausts retries
       FakeWebSocket._latest.fireClose(1006);
       expect(get(wsError)).toMatch(/Connection lost/);
+      expect(get(fatalWsError)).toMatch(/Connection lost/);
       // No 4th socket created
       expect(FakeWebSocket._instances.length).toBe(4);
     });
@@ -204,6 +210,7 @@ describe('ws.js', () => {
       connect('room-1');
       FakeWebSocket._latest.fireError();
       expect(get(wsError)).toMatch(/reconnect/i);
+      expect(get(fatalWsError)).toBeNull();
     });
   });
 
@@ -238,13 +245,15 @@ describe('ws.js', () => {
       expect(sessionStorage.getItem('participantId')).toBeNull();
     });
 
-    it('resets roomState, wsError, and myId to null', () => {
+    it('resets roomState, wsError, fatalWsError, and myId to null', () => {
       connect('room-1');
       FakeWebSocket._latest.fireMessage({ type: 'state', room: { id: 'r1' } });
       FakeWebSocket._latest.fireMessage({ type: 'error', message: 'oops' });
+      FakeWebSocket._latest.fireClose(WEBSOCKET_ERRORS.ROOM_NOT_FOUND.code);
       disconnect();
       expect(get(roomState)).toBeNull();
       expect(get(wsError)).toBeNull();
+      expect(get(fatalWsError)).toBeNull();
       expect(get(myId)).toBeNull();
     });
 

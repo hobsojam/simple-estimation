@@ -3,6 +3,7 @@ import { WEBSOCKET_ERRORS } from '../../shared/errors.json';
 
 export const roomState = writable(null);
 export const wsError = writable(null);
+export const fatalWsError = writable(null);
 
 let socket = null;
 let retryCount = 0;
@@ -17,6 +18,11 @@ const TERMINAL_CLOSE_MESSAGES = {
   [WEBSOCKET_ERRORS.ROOM_FULL.code]: WEBSOCKET_ERRORS.ROOM_FULL.description,
   [WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.code]: WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.description,
 };
+
+function setFatalError(message) {
+  wsError.set(message);
+  fatalWsError.set(message);
+}
 
 function getOrCreateParticipantId() {
   let id = sessionStorage.getItem(SESSION_KEY);
@@ -39,6 +45,8 @@ export function connect(roomId) {
   currentRoomId = roomId;
   intentionalClose = false;
   retryCount = 0;
+  wsError.set(null);
+  fatalWsError.set(null);
   const participantId = getOrCreateParticipantId();
   _myId.set(participantId);
   openConnection();
@@ -68,7 +76,7 @@ function openConnection() {
     if (intentionalClose) return;
     const terminalMessage = TERMINAL_CLOSE_MESSAGES[event.code];
     if (terminalMessage) {
-      wsError.set(terminalMessage);
+      setFatalError(terminalMessage);
       return;
     }
     if (retryCount < 3) {
@@ -76,7 +84,7 @@ function openConnection() {
       retryTimeout = setTimeout(openConnection, delay);
       retryCount++;
     } else {
-      wsError.set('Connection lost. Please refresh the page.');
+      setFatalError('Connection lost. Please refresh the page.');
     }
   });
 
@@ -105,5 +113,6 @@ export function disconnect() {
   }
   roomState.set(null);
   wsError.set(null);
+  fatalWsError.set(null);
   _myId.set(null);
 }

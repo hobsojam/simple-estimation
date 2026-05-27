@@ -1,12 +1,23 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { roomState, wsError, connect, disconnect, send } from './ws.js';
+  import { WEBSOCKET_ERRORS } from '../../shared/errors.json';
   import JoinForm from './lib/JoinForm.svelte';
   import RoomList from './lib/RoomList.svelte';
   import PlanningPoker from './lib/PlanningPoker.svelte';
   import BucketEstimation from './lib/BucketEstimation.svelte';
   import RelativeEstimation from './lib/RelativeEstimation.svelte';
   import clientPackage from '../package.json';
+
+  const FATAL_WS_MESSAGES = new Set([
+    WEBSOCKET_ERRORS.ROOM_ID_REQUIRED.description,
+    WEBSOCKET_ERRORS.ROOM_NOT_FOUND.description,
+    WEBSOCKET_ERRORS.ROOM_FULL.description,
+    WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.description,
+    'Access PIN required',
+    'Invalid access PIN',
+    'Connection lost. Please refresh the page.',
+  ]);
 
   let page = 'home';
   let pendingJoin = null;
@@ -152,9 +163,13 @@
     page = 'room';
   }
 
-  $: if ($wsError && page === 'room') {
+  $: if ($wsError && FATAL_WS_MESSAGES.has($wsError) && page === 'room') {
+    if (pendingJoin?.name) {
+      directName = pendingJoin.name;
+      directPin = pendingJoin.pin || '';
+    }
     joinSent = false;
-    if (pendingJoin) pendingJoin = { ...pendingJoin, accessPin: undefined };
+    pendingJoin = null;
     page = 'room-enter-name';
   }
 
@@ -223,9 +238,6 @@
         <button class="leave-btn" on:click={handleLeave}>Leave Room</button>
         {#if $roomState?.name}
           <span class="room-name">{$roomState.name}</span>
-        {/if}
-        {#if $wsError}
-          <span class="ws-error" role="alert">{$wsError}</span>
         {/if}
       </nav>
 
@@ -432,8 +444,4 @@
     color: #1e293b;
   }
 
-  .ws-error {
-    font-size: 0.85rem;
-    color: #b91c1c;
-  }
 </style>
