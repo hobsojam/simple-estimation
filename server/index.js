@@ -244,7 +244,8 @@ function handleConnection(ws, req) {
         return;
       }
 
-      await handleMessage(ws, currentRoom, data);
+      const stateChanged = await handleMessage(ws, currentRoom, data);
+      if (!stateChanged) return;
 
       const updatedRoom = getRoom(roomId);
       const sockets = roomSockets.get(roomId) || new Set();

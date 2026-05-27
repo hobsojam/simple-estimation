@@ -47,6 +47,10 @@ function latestState(ws) {
   return ws.sent.filter(msg => msg.type === 'state').at(-1).room;
 }
 
+function flushMessageChain() {
+  return new Promise(resolve => setImmediate(resolve));
+}
+
 beforeEach(() => {
   clearRooms();
   roomSockets.clear();
@@ -187,6 +191,40 @@ describe('handleConnection', () => {
     assert.equal(ws.sent[0].room.id, room.id);
     assert.equal(ws.sent[0].room.name, 'Sprint 42');
     assert.equal(ws.sent[0].room.participants[0].vote, null);
+  });
+
+  it('does not broadcast state after an invalid message', async () => {
+    const room = createRoom('planning-poker', null);
+    const sender = new FakeSocket();
+    const observer = new FakeSocket();
+    handleConnection(sender, requestFor(`/ws?roomId=${room.id}&participantId=p1`));
+    handleConnection(observer, requestFor(`/ws?roomId=${room.id}&participantId=p2`));
+    sender.sent = [];
+    observer.sent = [];
+
+    sender.emit('message', JSON.stringify({ type: 'teleport' }));
+    await flushMessageChain();
+
+    assert.deepEqual(sender.sent, [{ type: 'error', message: 'Unknown message type: teleport' }]);
+    assert.equal(observer.sent.length, 0);
+  });
+
+  it('broadcasts state after a valid state-changing message', async () => {
+    const room = createRoom('planning-poker', null);
+    const sender = new FakeSocket();
+    const observer = new FakeSocket();
+    handleConnection(sender, requestFor(`/ws?roomId=${room.id}&participantId=p1`));
+    handleConnection(observer, requestFor(`/ws?roomId=${room.id}&participantId=p2`));
+    sender.sent = [];
+    observer.sent = [];
+
+    sender.emit('message', JSON.stringify({ type: 'join', name: 'Alice' }));
+    await flushMessageChain();
+
+    assert.equal(sender.sent.length, 1);
+    assert.equal(observer.sent.length, 1);
+    assert.equal(sender.sent[0].type, 'state');
+    assert.deepEqual(latestState(observer).participants.map(p => p.name), ['Alice']);
   });
 });
 
