@@ -32,12 +32,6 @@ function markActivity(room) {
   room.lastActivityAt = Date.now();
 }
 
-function addParticipant(roomId, participant) {
-  const room = rooms.get(roomId);
-  if (!room) return;
-  room.participants.push(participant);
-}
-
 function upsertParticipant(roomId, participant) {
   const room = rooms.get(roomId);
   if (!room) return;
@@ -172,7 +166,6 @@ module.exports = {
   createRoom,
   getRoom,
   getAllRooms,
-  addParticipant,
   upsertParticipant,
   removeParticipant,
   setFacilitator,

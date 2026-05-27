@@ -1,7 +1,7 @@
 const { describe, it, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  createRoom, getRoom, addParticipant, upsertParticipant, removeParticipant, setFacilitator,
+  createRoom, getRoom, upsertParticipant, removeParticipant, setFacilitator,
   castVote, revealVotes, resetRound, addItem, moveItem,
   selectItem, finaliseItem, removeItem, startTimer, clearTimer, clearRooms,
 } = require('../rooms');
@@ -73,7 +73,7 @@ describe('rooms', () => {
   describe('lastActivityAt', () => {
     it('is updated by castVote', () => {
       const room = createRoom('planning-poker', null);
-      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+      upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
       expectUpdatesActivity(room, () => castVote(room.id, 'p1', '5'));
     });
 
@@ -143,34 +143,20 @@ describe('rooms', () => {
       expectUpdatesActivity(room, () => clearTimer(room.id));
     });
 
-    it('is NOT updated by addParticipant', () => {
-      const room = createRoom('planning-poker', null);
-      const snapshot = room.lastActivityAt;
-      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
-      assert.equal(room.lastActivityAt, snapshot);
-    });
-
     it('is NOT updated by removeParticipant', () => {
       const room = createRoom('planning-poker', null);
-      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+      upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
       const snapshot = room.lastActivityAt;
       removeParticipant(room.id, 'p1');
       assert.equal(room.lastActivityAt, snapshot);
     });
   });
 
-  describe('addParticipant / removeParticipant', () => {
-    it('adds a participant', () => {
-      const room = createRoom('planning-poker', null);
-      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
-      assert.equal(room.participants.length, 1);
-      assert.equal(room.participants[0].name, 'Alice');
-    });
-
+  describe('upsertParticipant / removeParticipant', () => {
     it('removes the correct participant', () => {
       const room = createRoom('planning-poker', null);
-      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
-      addParticipant(room.id, { id: 'p2', name: 'Bob', vote: null });
+      upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+      upsertParticipant(room.id, { id: 'p2', name: 'Bob', vote: null });
       removeParticipant(room.id, 'p1');
       assert.equal(room.participants.length, 1);
       assert.equal(room.participants[0].id, 'p2');
@@ -178,8 +164,8 @@ describe('rooms', () => {
 
     it('auto-assigns facilitator when facilitator leaves a non-PIN room', () => {
       const room = createRoom('planning-poker', null);
-      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
-      addParticipant(room.id, { id: 'p2', name: 'Bob', vote: null });
+      upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+      upsertParticipant(room.id, { id: 'p2', name: 'Bob', vote: null });
       setFacilitator(room.id, 'p1');
       removeParticipant(room.id, 'p1');
       assert.equal(room.facilitatorId, 'p2');
@@ -187,8 +173,8 @@ describe('rooms', () => {
 
     it('clears facilitator without reassigning when facilitator leaves a PIN-protected room', () => {
       const room = createRoom('planning-poker', 'hashed-pin');
-      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
-      addParticipant(room.id, { id: 'p2', name: 'Bob', vote: null });
+      upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+      upsertParticipant(room.id, { id: 'p2', name: 'Bob', vote: null });
       setFacilitator(room.id, 'p1');
       removeParticipant(room.id, 'p1');
       assert.equal(room.facilitatorId, null);
@@ -196,7 +182,7 @@ describe('rooms', () => {
 
     it('sets facilitatorId to null when last participant leaves', () => {
       const room = createRoom('planning-poker', null);
-      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+      upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
       setFacilitator(room.id, 'p1');
       removeParticipant(room.id, 'p1');
       assert.equal(room.facilitatorId, null);
@@ -212,18 +198,10 @@ describe('rooms', () => {
       assert.equal(room.participants.length, 0);
     });
 
-    it('addParticipant with a duplicate id adds the participant again', () => {
-      const room = createRoom('planning-poker', null);
-      const p = { id: 'p1', name: 'Alice', vote: null };
-      addParticipant(room.id, p);
-      addParticipant(room.id, p);
-      assert.equal(room.participants.length, 2);
-    });
-
     it('does not change facilitator when a non-facilitator leaves', () => {
       const room = createRoom('planning-poker', null);
-      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
-      addParticipant(room.id, { id: 'p2', name: 'Bob', vote: null });
+      upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+      upsertParticipant(room.id, { id: 'p2', name: 'Bob', vote: null });
       setFacilitator(room.id, 'p1');
       removeParticipant(room.id, 'p2');
       assert.equal(room.facilitatorId, 'p1');
@@ -233,7 +211,7 @@ describe('rooms', () => {
   describe('castVote / revealVotes / resetRound', () => {
     it('castVote stores the vote', () => {
       const room = createRoom('planning-poker', null);
-      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+      upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
       castVote(room.id, 'p1', '5');
       assert.equal(room.participants[0].vote, '5');
     });
@@ -246,7 +224,7 @@ describe('rooms', () => {
 
     it('resetRound clears votes and sets revealed to false', () => {
       const room = createRoom('planning-poker', null);
-      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: '8' });
+      upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: '8' });
       revealVotes(room.id);
       resetRound(room.id);
       assert.equal(room.revealed, false);
@@ -305,8 +283,8 @@ describe('rooms', () => {
 
     it('resets all participant votes', () => {
       const room = createRoom('planning-poker', null);
-      addParticipant(room.id, { id: 'p1', name: 'Alice', vote: '5' });
-      addParticipant(room.id, { id: 'p2', name: 'Bob', vote: '8' });
+      upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: '5' });
+      upsertParticipant(room.id, { id: 'p2', name: 'Bob', vote: '8' });
       addItem(room.id, { id: 'i1', label: 'Story A', status: 'pending', estimate: null });
       selectItem(room.id, 'i1');
       assert.equal(room.participants[0].vote, null);
