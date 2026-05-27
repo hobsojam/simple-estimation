@@ -267,6 +267,23 @@ describe('App.svelte page state machine', () => {
     expect(getByRole('heading', { name: 'Join Room' })).toBeInTheDocument();
   });
 
+  it('returns to the name prompt for invalid access PIN errors', async () => {
+    const { getByRole, getByPlaceholderText } = render(App);
+
+    await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Ivy' } });
+    await fireEvent.input(getByPlaceholderText('Paste room ID'), { target: { value: 'locked-room' } });
+    await fireEvent.click(getByRole('button', { name: 'Join' }));
+    await flush();
+    roomState.set({ ...baseRoom, accessRequired: true });
+    await flush();
+
+    wsError.set('Invalid access PIN');
+    await flush();
+
+    expect(getByRole('heading', { name: 'Join Room' })).toBeInTheDocument();
+    expect(getByPlaceholderText('Enter access PIN')).toBeInTheDocument();
+  });
+
   it('routes a pending join to the access prompt when access is required', async () => {
     const { getByRole, getByPlaceholderText } = render(App);
 

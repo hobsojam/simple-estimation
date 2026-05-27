@@ -14,6 +14,8 @@
     WEBSOCKET_ERRORS.ROOM_NOT_FOUND.description,
     WEBSOCKET_ERRORS.ROOM_FULL.description,
     WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.description,
+    'Access PIN required',
+    'Invalid access PIN',
     'Connection lost. Please refresh the page.',
   ]);
 
@@ -237,9 +239,6 @@
         {#if $roomState?.name}
           <span class="room-name">{$roomState.name}</span>
         {/if}
-        {#if $wsError}
-          <span class="ws-error" role="alert">{$wsError}</span>
-        {/if}
       </nav>
 
       {#if $roomState}
@@ -445,8 +444,4 @@
     color: #1e293b;
   }
 
-  .ws-error {
-    font-size: 0.85rem;
-    color: #b91c1c;
-  }
 </style>
