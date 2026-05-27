@@ -9,6 +9,7 @@ const {
   roomSockets,
   roomTimers,
   scheduleAutoReveal,
+  wsConnectionCountsByIp,
 } = require('../index');
 const {
   castVote,
@@ -39,8 +40,12 @@ class FakeSocket extends EventEmitter {
   }
 }
 
-function requestFor(path) {
-  return { url: path };
+function requestFor(path, { remoteAddress = '127.0.0.1', headers = {} } = {}) {
+  return {
+    url: path,
+    headers,
+    socket: { remoteAddress },
+  };
 }
 
 function latestState(ws) {
@@ -54,12 +59,14 @@ function flushMessageChain() {
 beforeEach(() => {
   clearRooms();
   roomSockets.clear();
+  wsConnectionCountsByIp.clear();
   for (const roomId of roomTimers.keys()) clearRoomTimer(roomId);
 });
 
 afterEach(() => {
   clearRooms();
   roomSockets.clear();
+  wsConnectionCountsByIp.clear();
   for (const roomId of roomTimers.keys()) clearRoomTimer(roomId);
 });
 
@@ -191,6 +198,53 @@ describe('handleConnection', () => {
     assert.equal(ws.sent[0].room.id, room.id);
     assert.equal(ws.sent[0].room.name, 'Sprint 42');
     assert.equal(ws.sent[0].room.participants[0].vote, null);
+  });
+
+  it('closes with a shared rate-limit error when one IP has too many open sockets', () => {
+    const room = createRoom('bucket', null);
+    const sockets = [];
+    for (let i = 0; i < 10; i += 1) {
+      const ws = new FakeSocket();
+      handleConnection(ws, requestFor(`/ws?roomId=${room.id}&participantId=p${i}`, {
+        remoteAddress: '203.0.113.10',
+      }));
+      sockets.push(ws);
+    }
+    const rejected = new FakeSocket();
+
+    handleConnection(rejected, requestFor(`/ws?roomId=${room.id}&participantId=blocked`, {
+      remoteAddress: '203.0.113.10',
+    }));
+
+    assert.deepEqual(rejected.closed, [{
+      code: WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.code,
+      reason: WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED.description,
+    }]);
+    assert.equal(rejected.sent.length, 0);
+    assert.equal(roomSockets.get(room.id).has(rejected), false);
+    assert.equal(wsConnectionCountsByIp.get('203.0.113.10'), 10);
+  });
+
+  it('allows a new socket from an IP after another socket from that IP closes', () => {
+    const room = createRoom('bucket', null);
+    const sockets = [];
+    for (let i = 0; i < 10; i += 1) {
+      const ws = new FakeSocket();
+      handleConnection(ws, requestFor(`/ws?roomId=${room.id}&participantId=p${i}`, {
+        remoteAddress: '203.0.113.20',
+      }));
+      sockets.push(ws);
+    }
+    sockets[0].emit('close');
+    const replacement = new FakeSocket();
+
+    handleConnection(replacement, requestFor(`/ws?roomId=${room.id}&participantId=replacement`, {
+      remoteAddress: '203.0.113.20',
+    }));
+
+    assert.deepEqual(replacement.closed, []);
+    assert.equal(roomSockets.get(room.id).has(replacement), true);
+    assert.equal(wsConnectionCountsByIp.get('203.0.113.20'), 10);
   });
 
   it('does not broadcast state after an invalid message', async () => {

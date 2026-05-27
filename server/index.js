@@ -14,6 +14,8 @@ const { validateShortText } = require('./validate');
 const PORT = process.env.PORT || 3000;
 const STATIC_DIR = process.env.STATIC_DIR || './public';
 const DEMO_MODE = process.env.DEMO_MODE === 'true';
+const TRUST_PROXY = process.env.TRUST_PROXY === 'true';
+const WS_CONNECTION_LIMIT_PER_IP = Number.parseInt(process.env.WS_CONNECTION_LIMIT_PER_IP, 10) || 10;
 
 const app = express();
 app.use(express.json());
@@ -151,6 +153,7 @@ function broadcastState(room, sockets) {
 
 const roomSockets = new Map();
 const roomTimers = new Map();
+const wsConnectionCountsByIp = new Map();
 const wsMessageTimestamps = new WeakMap();
 
 function clearRoomTimer(roomId) {
@@ -184,10 +187,36 @@ function closeWithError(ws, error) {
   ws.close(error.code, error.description);
 }
 
+function clientIpFor(req) {
+  if (TRUST_PROXY) {
+    const forwardedFor = req.headers?.['x-forwarded-for'];
+    const firstForwardedIp = Array.isArray(forwardedFor)
+      ? forwardedFor[0]
+      : forwardedFor?.split(',')[0];
+    if (firstForwardedIp?.trim()) return firstForwardedIp.trim();
+  }
+  return req.socket?.remoteAddress || req.connection?.remoteAddress || 'unknown';
+}
+
+function incrementWsConnectionCount(ip) {
+  wsConnectionCountsByIp.set(ip, (wsConnectionCountsByIp.get(ip) || 0) + 1);
+}
+
+function decrementWsConnectionCount(ip) {
+  const count = wsConnectionCountsByIp.get(ip);
+  if (!count) return;
+  if (count === 1) {
+    wsConnectionCountsByIp.delete(ip);
+  } else {
+    wsConnectionCountsByIp.set(ip, count - 1);
+  }
+}
+
 function handleConnection(ws, req) {
   const url = new URL(req.url, `http://localhost`);
   const roomId = url.searchParams.get('roomId');
   const participantId = url.searchParams.get('participantId');
+  const clientIp = clientIpFor(req);
 
   if (!roomId) {
     closeWithError(ws, WEBSOCKET_ERRORS.ROOM_ID_REQUIRED);
@@ -205,9 +234,16 @@ function handleConnection(ws, req) {
     return;
   }
 
+  if ((wsConnectionCountsByIp.get(clientIp) || 0) >= WS_CONNECTION_LIMIT_PER_IP) {
+    closeWithError(ws, WEBSOCKET_ERRORS.RATE_LIMIT_EXCEEDED);
+    return;
+  }
+
+  ws.clientIp = clientIp;
   ws.participantId = participantId || uuidv4();
   ws.roomId = roomId;
   ws.isAuthorized = room.accessPinHash === null;
+  incrementWsConnectionCount(clientIp);
 
   if (!roomSockets.has(roomId)) {
     roomSockets.set(roomId, new Set());
@@ -273,6 +309,7 @@ function handleConnection(ws, req) {
   });
 
   ws.on('close', () => {
+    decrementWsConnectionCount(ws.clientIp);
     const sockets = roomSockets.get(roomId);
     if (sockets) {
       sockets.delete(ws);
@@ -336,4 +373,5 @@ module.exports = {
   roomTimers,
   scheduleAutoReveal,
   sweepInactiveRooms,
+  wsConnectionCountsByIp,
 };
