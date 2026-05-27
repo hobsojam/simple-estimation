@@ -1,13 +1,19 @@
 const { describe, it, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  createRoom, getRoom, addParticipant, removeParticipant, setFacilitator,
+  createRoom, getRoom, addParticipant, upsertParticipant, removeParticipant, setFacilitator,
   castVote, revealVotes, resetRound, addItem, moveItem,
-  selectItem, finaliseItem, removeItem, clearRooms,
+  selectItem, finaliseItem, removeItem, startTimer, clearTimer, clearRooms,
 } = require('../rooms');
 
 describe('rooms', () => {
   beforeEach(() => clearRooms());
+
+  function expectUpdatesActivity(room, action) {
+    room.lastActivityAt = 1;
+    action();
+    assert.ok(room.lastActivityAt > 1);
+  }
 
   describe('createRoom', () => {
     it('returns the correct shape', () => {
@@ -68,38 +74,73 @@ describe('rooms', () => {
     it('is updated by castVote', () => {
       const room = createRoom('planning-poker', null);
       addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
-      const before = Date.now();
-      castVote(room.id, 'p1', '5');
-      assert.ok(room.lastActivityAt >= before);
+      expectUpdatesActivity(room, () => castVote(room.id, 'p1', '5'));
     });
 
     it('is updated by moveItem', () => {
       const room = createRoom('bucket', null);
       addItem(room.id, { id: 'i1', label: 'A', position: null });
-      const before = Date.now();
-      moveItem(room.id, 'i1', 'M');
-      assert.ok(room.lastActivityAt >= before);
+      expectUpdatesActivity(room, () => moveItem(room.id, 'i1', 'M'));
     });
 
     it('is updated by addItem', () => {
       const room = createRoom('bucket', null);
-      const before = Date.now();
-      addItem(room.id, { id: 'i1', label: 'A', position: null });
-      assert.ok(room.lastActivityAt >= before);
+      expectUpdatesActivity(room, () => addItem(room.id, { id: 'i1', label: 'A', position: null }));
     });
 
     it('is updated by revealVotes', () => {
       const room = createRoom('planning-poker', null);
-      const before = Date.now();
-      revealVotes(room.id);
-      assert.ok(room.lastActivityAt >= before);
+      expectUpdatesActivity(room, () => revealVotes(room.id));
     });
 
     it('is updated by resetRound', () => {
       const room = createRoom('planning-poker', null);
-      const before = Date.now();
-      resetRound(room.id);
-      assert.ok(room.lastActivityAt >= before);
+      expectUpdatesActivity(room, () => resetRound(room.id));
+    });
+
+    it('is updated by selectItem', () => {
+      const room = createRoom('planning-poker', null);
+      addItem(room.id, { id: 'i1', label: 'Story A', status: 'pending', estimate: null });
+      expectUpdatesActivity(room, () => selectItem(room.id, 'i1'));
+    });
+
+    it('is updated by finaliseItem', () => {
+      const room = createRoom('planning-poker', null);
+      addItem(room.id, { id: 'i1', label: 'Story A', status: 'active', estimate: null });
+      expectUpdatesActivity(room, () => finaliseItem(room.id, 'i1', '8'));
+    });
+
+    it('is updated by removeItem', () => {
+      const room = createRoom('planning-poker', null);
+      addItem(room.id, { id: 'i1', label: 'Story A', status: 'pending', estimate: null });
+      expectUpdatesActivity(room, () => removeItem(room.id, 'i1'));
+    });
+
+    it('is updated by setFacilitator', () => {
+      const room = createRoom('planning-poker', null);
+      expectUpdatesActivity(room, () => setFacilitator(room.id, 'p1'));
+    });
+
+    it('is updated by upsertParticipant when adding a participant', () => {
+      const room = createRoom('planning-poker', null);
+      expectUpdatesActivity(room, () => upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null }));
+    });
+
+    it('is updated by upsertParticipant when renaming a participant', () => {
+      const room = createRoom('planning-poker', null);
+      upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+      expectUpdatesActivity(room, () => upsertParticipant(room.id, { id: 'p1', name: 'Alice Updated', vote: null }));
+    });
+
+    it('is updated by startTimer', () => {
+      const room = createRoom('planning-poker', null);
+      expectUpdatesActivity(room, () => startTimer(room.id, 60));
+    });
+
+    it('is updated by clearTimer', () => {
+      const room = createRoom('planning-poker', null);
+      startTimer(room.id, 60);
+      expectUpdatesActivity(room, () => clearTimer(room.id));
     });
 
     it('is NOT updated by addParticipant', () => {

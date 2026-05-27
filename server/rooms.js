@@ -28,6 +28,10 @@ function getAllRooms() {
   return Array.from(rooms.values());
 }
 
+function markActivity(room) {
+  room.lastActivityAt = Date.now();
+}
+
 function addParticipant(roomId, participant) {
   const room = rooms.get(roomId);
   if (!room) return;
@@ -40,9 +44,11 @@ function upsertParticipant(roomId, participant) {
   const existing = room.participants.find(p => p.id === participant.id);
   if (existing) {
     existing.name = participant.name;
+    markActivity(room);
     return;
   }
   room.participants.push(participant);
+  markActivity(room);
 }
 
 function removeParticipant(roomId, participantId) {
@@ -60,6 +66,7 @@ function setFacilitator(roomId, participantId) {
   const room = rooms.get(roomId);
   if (!room) return;
   room.facilitatorId = participantId;
+  markActivity(room);
 }
 
 function castVote(roomId, participantId, vote) {
@@ -68,7 +75,7 @@ function castVote(roomId, participantId, vote) {
   const participant = room.participants.find(p => p.id === participantId);
   if (participant) {
     participant.vote = vote;
-    room.lastActivityAt = Date.now();
+    markActivity(room);
   }
 }
 
@@ -78,7 +85,7 @@ function moveItem(roomId, itemId, position) {
   const item = room.items.find(i => i.id === itemId);
   if (item) {
     item.position = position;
-    room.lastActivityAt = Date.now();
+    markActivity(room);
   }
 }
 
@@ -86,26 +93,28 @@ function addItem(roomId, item) {
   const room = rooms.get(roomId);
   if (!room) return;
   room.items.push(item);
-  room.lastActivityAt = Date.now();
+  markActivity(room);
 }
 
 function revealVotes(roomId) {
   const room = rooms.get(roomId);
   if (!room) return;
   room.revealed = true;
-  room.lastActivityAt = Date.now();
+  markActivity(room);
 }
 
 function startTimer(roomId, durationSeconds) {
   const room = rooms.get(roomId);
   if (!room) return;
   room.timer = { endsAt: Date.now() + durationSeconds * 1000, durationSeconds };
+  markActivity(room);
 }
 
 function clearTimer(roomId) {
   const room = rooms.get(roomId);
   if (!room) return;
   room.timer = { endsAt: null, durationSeconds: null };
+  markActivity(room);
 }
 
 function resetRound(roomId) {
@@ -116,7 +125,7 @@ function resetRound(roomId) {
   for (const p of room.participants) {
     p.vote = null;
   }
-  room.lastActivityAt = Date.now();
+  markActivity(room);
 }
 
 function selectItem(roomId, itemId) {
@@ -129,6 +138,7 @@ function selectItem(roomId, itemId) {
   if (item) item.status = 'active';
   for (const p of room.participants) p.vote = null;
   room.revealed = false;
+  markActivity(room);
 }
 
 function finaliseItem(roomId, itemId, estimate) {
@@ -138,13 +148,16 @@ function finaliseItem(roomId, itemId, estimate) {
   if (item) {
     item.status = 'done';
     item.estimate = estimate;
+    markActivity(room);
   }
 }
 
 function removeItem(roomId, itemId) {
   const room = rooms.get(roomId);
   if (!room) return;
+  const originalLength = room.items.length;
   room.items = room.items.filter(i => i.id !== itemId);
+  if (room.items.length !== originalLength) markActivity(room);
 }
 
 function deleteRoom(roomId) {
