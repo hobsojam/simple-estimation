@@ -26,6 +26,7 @@ function send(ws, payload) {
 
 function sendError(ws, message) {
   send(ws, { type: 'error', message });
+  return false;
 }
 
 function isFacilitator(ws, room, message) {
@@ -126,7 +127,7 @@ async function handleJoin(ws, room, data) {
     return sendError(ws, 'Name is required');
   }
 
-  if (!(await ensureAccess(ws, room, data))) return;
+  if (!(await ensureAccess(ws, room, data))) return false;
 
   // Stryker disable next-line StringLiteral
   console.log(`[WS] Join success for ${participantName} (${ws.participantId}) in ${room.id}`);
@@ -134,13 +135,14 @@ async function handleJoin(ws, room, data) {
   const noFacilitator = !room.facilitatorId;
   const pinRequired = !!room.pinHash;
   const facilitatorPinValid = await verifyInitialFacilitatorPin(ws, room, data, noFacilitator, pinRequired);
-  if (facilitatorPinValid === null) return;
+  if (facilitatorPinValid === null) return false;
   upsertParticipant(room.id, { id: ws.participantId, name: participantName, vote: null });
 
-  if (!noFacilitator) return;
+  if (!noFacilitator) return true;
   if (!pinRequired || facilitatorPinValid) {
     setFacilitator(room.id, ws.participantId);
   }
+  return true;
 }
 
 async function handleClaimFacilitator(ws, room, data) {
@@ -151,6 +153,7 @@ async function handleClaimFacilitator(ws, room, data) {
   if (!valid) return sendError(ws, 'Invalid PIN');
 
   setFacilitator(room.id, ws.participantId);
+  return true;
 }
 
 function handleVote(ws, room, data) {
@@ -159,9 +162,10 @@ function handleVote(ws, room, data) {
   }
 
   const voteStr = parseVoteValue(ws, data.vote, 'Vote value required', 'Invalid vote value');
-  if (voteStr === null) return;
+  if (voteStr === null) return false;
 
   castVote(room.id, ws.participantId, voteStr);
+  return true;
 }
 
 function handleMoveItem(ws, room, data) {
@@ -172,19 +176,21 @@ function handleMoveItem(ws, room, data) {
   if (data.position === undefined) return sendError(ws, 'position required');
 
   moveItem(room.id, data.itemId, data.position);
+  return true;
 }
 
 function handleAddItem(ws, room, data) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can add items')) return;
+  if (!isFacilitator(ws, room, 'Only the facilitator can add items')) return false;
 
   const label = validateItemLabel(ws, room, data.label);
-  if (label === null) return;
+  if (label === null) return false;
 
   addItem(room.id, createItem(room, label));
+  return true;
 }
 
 function handleSelectItem(ws, room, data) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can select items')) return;
+  if (!isFacilitator(ws, room, 'Only the facilitator can select items')) return false;
   if (!data.itemId) return sendError(ws, 'itemId required');
 
   const item = findItem(room, data.itemId);
@@ -192,24 +198,26 @@ function handleSelectItem(ws, room, data) {
   if (item.status === 'done') return sendError(ws, 'Cannot select a done item');
 
   selectItem(room.id, data.itemId);
+  return true;
 }
 
 function handleFinaliseItem(ws, room, data) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can finalise items')) return;
+  if (!isFacilitator(ws, room, 'Only the facilitator can finalise items')) return false;
   if (!data.itemId) return sendError(ws, 'itemId required');
 
   const estimateStr = parseVoteValue(ws, data.estimate, 'estimate required', 'Invalid estimate value');
-  if (estimateStr === null) return;
+  if (estimateStr === null) return false;
 
   const item = findItem(room, data.itemId);
   if (!item) return sendError(ws, 'Item not found');
   if (item.status !== 'active') return sendError(ws, 'Only the active item can be finalised');
 
   finaliseItem(room.id, data.itemId, estimateStr);
+  return true;
 }
 
 function handleRemoveItem(ws, room, data) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can remove items')) return;
+  if (!isFacilitator(ws, room, 'Only the facilitator can remove items')) return false;
   if (!data.itemId) return sendError(ws, 'itemId required');
 
   const item = findItem(room, data.itemId);
@@ -217,23 +225,26 @@ function handleRemoveItem(ws, room, data) {
   if (item.status !== 'pending') return sendError(ws, 'Only pending items can be removed');
 
   removeItem(room.id, data.itemId);
+  return true;
 }
 
 function handleReveal(ws, room) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can reveal votes')) return;
+  if (!isFacilitator(ws, room, 'Only the facilitator can reveal votes')) return false;
 
   clearTimer(room.id);
   revealVotes(room.id);
+  return true;
 }
 
 function handleReset(ws, room) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can reset the round')) return;
+  if (!isFacilitator(ws, room, 'Only the facilitator can reset the round')) return false;
 
   resetRound(room.id);
+  return true;
 }
 
 function handleStartTimer(ws, room, data) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can start the timer')) return;
+  if (!isFacilitator(ws, room, 'Only the facilitator can start the timer')) return false;
   if (room.type !== 'planning-poker') return sendError(ws, 'Timer is only available in Planning Poker rooms');
 
   const seconds = Number(data.seconds);
@@ -242,12 +253,14 @@ function handleStartTimer(ws, room, data) {
   }
 
   startTimer(room.id, seconds);
+  return true;
 }
 
 function handleCancelTimer(ws, room) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can cancel the timer')) return;
+  if (!isFacilitator(ws, room, 'Only the facilitator can cancel the timer')) return false;
 
   clearTimer(room.id);
+  return true;
 }
 
 async function handleMessage(ws, room, data) {
