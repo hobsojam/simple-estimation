@@ -25,7 +25,7 @@ function sanitizeRoom(room, isAuthorized = true) {
       voted: p.vote !== null,
       vote: room.revealed ? p.vote : null,
     })),
-    items: room.items,
+    items: room.items.map(i => ({ ...i })),
   };
 }
 
