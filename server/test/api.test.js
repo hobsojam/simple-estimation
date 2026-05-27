@@ -109,6 +109,18 @@ describe('HTTP security headers', () => {
     assert.equal(res.headers['referrer-policy'], 'no-referrer');
     assert.ok(res.headers['content-security-policy'], 'CSP header should be present');
   });
+
+  it('sets HSTS when the original request used HTTPS', async () => {
+    const res = await request(app)
+      .get('/api/rooms')
+      .set('X-Forwarded-Proto', 'https');
+    assert.equal(res.headers['strict-transport-security'], 'max-age=31536000');
+  });
+
+  it('does not set HSTS for plain HTTP requests', async () => {
+    const res = await request(app).get('/api/rooms');
+    assert.equal(res.headers['strict-transport-security'], undefined);
+  });
 });
 
 describe('GET /api/config', () => {
