@@ -11,12 +11,12 @@ const {
   scheduleAutoReveal,
 } = require('../index');
 const {
-  addParticipant,
   castVote,
   clearRooms,
   createRoom,
   getRoom,
   revealVotes,
+  upsertParticipant,
 } = require('../rooms');
 
 class FakeSocket extends EventEmitter {
@@ -62,7 +62,7 @@ afterEach(() => {
 describe('broadcastState', () => {
   it('sends sanitized state to every open socket', () => {
     const room = createRoom('planning-poker', null, 'Sprint 42');
-    addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+    upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
     const first = new FakeSocket();
     const second = new FakeSocket();
 
@@ -88,7 +88,7 @@ describe('broadcastState', () => {
 
   it('uses socket authorization when sanitizing state', () => {
     const room = createRoom('planning-poker', null, 'Protected', 'access-hash');
-    addParticipant(room.id, { id: 'p1', name: 'Alice', vote: '5' });
+    upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: '5' });
     revealVotes(room.id);
     const authorized = new FakeSocket();
     authorized.isAuthorized = true;
@@ -130,7 +130,7 @@ describe('handleConnection', () => {
   it('closes with a shared error code when the room is full', () => {
     const room = createRoom('bucket', null);
     for (let i = 0; i < 100; i += 1) {
-      addParticipant(room.id, { id: `p${i}`, name: `User ${i}`, vote: null });
+      upsertParticipant(room.id, { id: `p${i}`, name: `User ${i}`, vote: null });
     }
     const ws = new FakeSocket();
 
@@ -177,7 +177,7 @@ describe('handleConnection', () => {
 
   it('sends initial state on connect', () => {
     const room = createRoom('planning-poker', null, 'Sprint 42');
-    addParticipant(room.id, { id: 'p1', name: 'Alice', vote: '8' });
+    upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: '8' });
     const ws = new FakeSocket();
 
     handleConnection(ws, requestFor(`/ws?roomId=${room.id}&participantId=p1`));
@@ -193,8 +193,8 @@ describe('handleConnection', () => {
 describe('disconnect handling', () => {
   it('removes the socket and participant, then broadcasts to remaining sockets', () => {
     const room = createRoom('planning-poker', null);
-    addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
-    addParticipant(room.id, { id: 'p2', name: 'Bob', vote: null });
+    upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+    upsertParticipant(room.id, { id: 'p2', name: 'Bob', vote: null });
     const leaving = new FakeSocket();
     const remaining = new FakeSocket();
     handleConnection(leaving, requestFor(`/ws?roomId=${room.id}&participantId=p1`));
@@ -211,7 +211,7 @@ describe('disconnect handling', () => {
 
   it('does not broadcast after the last socket disconnects', () => {
     const room = createRoom('bucket', null);
-    addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+    upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
     const ws = new FakeSocket();
     handleConnection(ws, requestFor(`/ws?roomId=${room.id}&participantId=p1`));
     ws.sent = [];
@@ -227,7 +227,7 @@ describe('disconnect handling', () => {
 describe('scheduleAutoReveal', () => {
   it('reveals votes and broadcasts state after the specified delay', async () => {
     const room = createRoom('planning-poker', null);
-    addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+    upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
     castVote(room.id, 'p1', '5');
     const ws = new FakeSocket();
     ws.isAuthorized = true;
@@ -245,7 +245,7 @@ describe('scheduleAutoReveal', () => {
 
   it('does not reveal or broadcast when the room is already revealed', async () => {
     const room = createRoom('planning-poker', null);
-    addParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
+    upsertParticipant(room.id, { id: 'p1', name: 'Alice', vote: null });
     castVote(room.id, 'p1', '8');
     revealVotes(room.id);
     const ws = new FakeSocket();
