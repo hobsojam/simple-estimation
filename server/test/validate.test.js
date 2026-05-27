@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { shortText } = require('../validate');
+const { shortText, validateShortText } = require('../validate');
 
 describe('shortText', () => {
   it('returns null for undefined', () => {
@@ -35,18 +35,13 @@ describe('shortText', () => {
     assert.equal(shortText('<b></b>'), null);
   });
 
-  it('returns null when input exceeds maxLen', () => {
-    assert.equal(shortText('a'.repeat(201)), null);
+  it('returns text even when it exceeds the default validation limit', () => {
+    assert.equal(shortText('a'.repeat(201)), 'a'.repeat(201));
   });
 
   it('accepts a string exactly at maxLen', () => {
     const s = 'a'.repeat(200);
     assert.equal(shortText(s), s);
-  });
-
-  it('accepts a custom maxLen', () => {
-    assert.equal(shortText('hello', 3), null);
-    assert.equal(shortText('hi', 3), 'hi');
   });
 
   it('coerces non-string values', () => {
@@ -60,5 +55,20 @@ describe('shortText', () => {
   it('output never contains < regardless of input structure', () => {
     const result = shortText('<<script>script>alert(1)</script>/script>');
     assert.ok(result === null || !result.includes('<'));
+  });
+});
+
+describe('validateShortText', () => {
+  it('returns required for missing text', () => {
+    assert.deepEqual(validateShortText(undefined), { ok: false, reason: 'required' });
+    assert.deepEqual(validateShortText('   '), { ok: false, reason: 'required' });
+  });
+
+  it('returns too_long for text over the limit', () => {
+    assert.deepEqual(validateShortText('hello', 3), { ok: false, reason: 'too_long' });
+  });
+
+  it('returns normalized text for valid input', () => {
+    assert.deepEqual(validateShortText(' <b>Alice</b> ', 10), { ok: true, value: 'Alice' });
   });
 });
