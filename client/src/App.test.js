@@ -2,19 +2,21 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, fireEvent, waitFor } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import App from './App.svelte';
-import { roomState, wsError, connect, disconnect, send } from './ws.js';
+import { roomState, wsError, fatalWsError, connect, disconnect, send } from './ws.js';
 import clientPackage from '../package.json';
 
 vi.mock('./ws.js', async () => {
   const { writable } = await import('svelte/store');
-  return {
+  globalThis.__appTestWsStores ??= {
     roomState: writable(null),
     wsError: writable(null),
+    fatalWsError: writable(null),
     myId: writable(null),
     connect: vi.fn(),
     disconnect: vi.fn(),
     send: vi.fn(),
   };
+  return globalThis.__appTestWsStores;
 });
 
 const baseRoom = {
@@ -69,6 +71,7 @@ async function flush() {
 beforeEach(() => {
   roomState.set(null);
   wsError.set(null);
+  fatalWsError.set(null);
   connect.mockClear();
   disconnect.mockClear();
   send.mockClear();
@@ -229,6 +232,39 @@ describe('App.svelte page state machine', () => {
 
     expect(getByRole('alert')).toHaveTextContent('Connection failed');
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it('stays in the room for transient wsError messages', async () => {
+    const { getByRole, getByPlaceholderText, queryByRole } = render(App);
+
+    await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Gina' } });
+    await fireEvent.input(getByPlaceholderText('Paste room ID'), { target: { value: 'room-join' } });
+    await fireEvent.click(getByRole('button', { name: 'Join' }));
+    await flush();
+    roomState.set(baseRoom);
+    await flush();
+
+    wsError.set('Invalid vote value');
+    await flush();
+
+    expect(getByRole('button', { name: 'Leave Room' })).toBeInTheDocument();
+    expect(queryByRole('heading', { name: 'Join Room' })).not.toBeInTheDocument();
+  });
+
+  it('returns to the name prompt for fatal WebSocket errors', async () => {
+    const { getByRole, getByPlaceholderText } = render(App);
+
+    await fireEvent.input(getByPlaceholderText('Enter your name'), { target: { value: 'Hank' } });
+    await fireEvent.input(getByPlaceholderText('Paste room ID'), { target: { value: 'room-join' } });
+    await fireEvent.click(getByRole('button', { name: 'Join' }));
+    await flush();
+    roomState.set(baseRoom);
+    await flush();
+
+    wsError.set('Room not found. The link may be expired or incorrect.');
+    await flush();
+
+    expect(getByRole('heading', { name: 'Join Room' })).toBeInTheDocument();
   });
 
   it('routes a pending join to the access prompt when access is required', async () => {
