@@ -47,6 +47,8 @@ cd client && npm run build
 cd e2e && npm test
 ```
 
+Do not commit generated `client/dist` or `server/public` files after these checks; they are recreated by Docker and CI.
+
 If you introduce a new page state or major new component, add an axe assertion for it.
 
 ### Manual checklist (before each PR touching UI)

@@ -25,6 +25,7 @@ These rules apply whenever you are working in this repository. Follow them witho
 ## File system
 
 - The server only reads from `./public` (static files) and `node_modules`. It must not read from or write to any path derived from client input.
+- `server/public` and `client/dist` are generated static build outputs. Do not commit or force-add them; Docker and CI recreate them from source.
 - Do not use `__dirname` concatenation with user-supplied strings to build file paths. Use `path.join` with validated, fixed path segments only.
 - Never serve files outside of the `STATIC_DIR` directory. The static file middleware must be locked to that directory.
 
