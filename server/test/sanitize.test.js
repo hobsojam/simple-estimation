@@ -49,9 +49,15 @@ describe('sanitizeRoom', () => {
     assert.equal(result.name, null);
   });
 
-  it('includes items unchanged', () => {
+  it('includes item values unchanged', () => {
     const result = sanitizeRoom(baseRoom);
     assert.deepEqual(result.items, baseRoom.items);
+  });
+
+  it('clones items to avoid exposing live room state references', () => {
+    const result = sanitizeRoom(baseRoom);
+    assert.notEqual(result.items, baseRoom.items);
+    assert.notEqual(result.items[0], baseRoom.items[0]);
   });
 
   it('preserves participant id and name', () => {
