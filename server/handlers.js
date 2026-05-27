@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
-const { shortText } = require('./validate');
+const { validateShortText } = require('./validate');
 const {
   upsertParticipant,
   setFacilitator,
@@ -57,9 +57,13 @@ function parseVoteValue(ws, value, requiredMessage, invalidPrefix) {
 }
 
 function validateItemLabel(ws, room, label) {
-  const trimmedLabel = shortText(label);
-  if (!trimmedLabel) {
+  const result = validateShortText(label);
+  if (!result.ok && result.reason === 'required') {
     sendError(ws, 'Item label required');
+    return null;
+  }
+  if (!result.ok) {
+    sendError(ws, 'Item label must be 200 characters or fewer');
     return null;
   }
 
@@ -68,7 +72,7 @@ function validateItemLabel(ws, room, label) {
     return null;
   }
 
-  return trimmedLabel;
+  return result.value;
 }
 
 function createItem(room, label) {
@@ -120,23 +124,28 @@ async function verifyInitialFacilitatorPin(ws, room, data, noFacilitator, pinReq
 }
 
 async function handleJoin(ws, room, data) {
-  const participantName = shortText(data.name);
-  if (!participantName) {
+  const participantName = validateShortText(data.name);
+  if (!participantName.ok && participantName.reason === 'required') {
     // Stryker disable next-line StringLiteral
     console.log(`[WS] Join failed: name missing or invalid`);
     return sendError(ws, 'Name is required');
+  }
+  if (!participantName.ok) {
+    // Stryker disable next-line StringLiteral
+    console.log(`[WS] Join failed: name too long`);
+    return sendError(ws, 'Name must be 200 characters or fewer');
   }
 
   if (!(await ensureAccess(ws, room, data))) return false;
 
   // Stryker disable next-line StringLiteral
-  console.log(`[WS] Join success for ${participantName} (${ws.participantId}) in ${room.id}`);
+  console.log(`[WS] Join success for ${participantName.value} (${ws.participantId}) in ${room.id}`);
 
   const noFacilitator = !room.facilitatorId;
   const pinRequired = !!room.pinHash;
   const facilitatorPinValid = await verifyInitialFacilitatorPin(ws, room, data, noFacilitator, pinRequired);
   if (facilitatorPinValid === null) return false;
-  upsertParticipant(room.id, { id: ws.participantId, name: participantName, vote: null });
+  upsertParticipant(room.id, { id: ws.participantId, name: participantName.value, vote: null });
 
   if (!noFacilitator) return true;
   if (!pinRequired || facilitatorPinValid) {

@@ -96,6 +96,7 @@
           type="text"
           bind:value={newItemLabel}
           placeholder="Add new item…"
+          maxlength="200"
           on:keydown={(e) => e.key === 'Enter' && addItem()}
         />
         <button class="primary" on:click={addItem} disabled={!newItemLabel.trim()}>Add Item</button>

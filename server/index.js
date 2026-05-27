@@ -9,7 +9,7 @@ const { WEBSOCKET_ERRORS } = require('../shared/errors.json');
 const { createRoom, getRoom, getAllRooms, removeParticipant, deleteRoom, revealVotes, clearTimer } = require('./rooms');
 const { handleMessage } = require('./handlers');
 const { sanitizeRoom } = require('./sanitize');
-const { shortText } = require('./validate');
+const { validateShortText } = require('./validate');
 
 const PORT = process.env.PORT || 3000;
 const STATIC_DIR = process.env.STATIC_DIR || './public';
@@ -69,10 +69,18 @@ app.post('/api/rooms', createRoomLimiter, async (req, res) => {
   if (accessPin && String(accessPin).length > 64) {
     return res.status(400).json({ error: 'Access PIN must be 64 characters or fewer' });
   }
-  const trimmedName = shortText(name);
+  const roomName = name === undefined || name === null || String(name).trim() === ''
+    ? { ok: true, value: null }
+    : validateShortText(name);
+  if (!roomName.ok && roomName.reason === 'required') {
+    return res.status(400).json({ error: 'Room name must include text' });
+  }
+  if (!roomName.ok) {
+    return res.status(400).json({ error: 'Room name must be 200 characters or fewer' });
+  }
   const pinHash = pin ? await bcrypt.hash(String(pin), 10) : null;
   const accessPinHash = accessPin ? await bcrypt.hash(String(accessPin), 10) : null;
-  const room = createRoom(type, pinHash, trimmedName || null, accessPinHash);
+  const room = createRoom(type, pinHash, roomName.value, accessPinHash);
   res.json({ id: room.id });
 });
 

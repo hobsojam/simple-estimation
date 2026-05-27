@@ -10,11 +10,18 @@ function stripTags(value) {
     .join('');
 }
 
-function shortText(value, maxLen = 200) {
+function shortText(value) {
   if (value === undefined || value === null) return null;
   const s = stripTags(value).trim();
   if (!s) return null;
-  return s.length > maxLen ? null : s;
+  return s;
 }
 
-module.exports = { shortText };
+function validateShortText(value, maxLen = 200) {
+  const text = shortText(value);
+  if (!text) return { ok: false, reason: 'required' };
+  if (text.length > maxLen) return { ok: false, reason: 'too_long' };
+  return { ok: true, value: text };
+}
+
+module.exports = { shortText, validateShortText };

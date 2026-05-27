@@ -74,11 +74,12 @@ describe('POST /api/rooms', () => {
     assert.equal(res.status, 200);
   });
 
-  it('creates room without name when name exceeds 200 chars', async () => {
+  it('rejects room name when it exceeds 200 chars', async () => {
     const res = await request(app)
       .post('/api/rooms')
       .send({ type: 'planning-poker', name: 'a'.repeat(201) });
-    assert.equal(res.status, 200);
+    assert.equal(res.status, 400);
+    assert.equal(res.body.error, 'Room name must be 200 characters or fewer');
   });
 
   it('strips HTML tags from room name', async () => {
@@ -89,6 +90,14 @@ describe('POST /api/rooms', () => {
     const { getRoom } = require('../rooms');
     const room = getRoom(res.body.id);
     assert.equal(room.name, 'Sprint 42');
+  });
+
+  it('rejects room name when only empty tags remain after stripping', async () => {
+    const res = await request(app)
+      .post('/api/rooms')
+      .send({ type: 'planning-poker', name: '<b></b>' });
+    assert.equal(res.status, 400);
+    assert.equal(res.body.error, 'Room name must include text');
   });
 });
 

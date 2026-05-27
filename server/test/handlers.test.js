@@ -153,7 +153,7 @@ describe('handlers', () => {
       const room = createRoom('planning-poker', null);
       const ws = mockWs('p1');
       await handleMessage(ws, room, { type: 'join', name: 'a'.repeat(201) });
-      assert.equal(ws.messages[0].type, 'error');
+      assert.deepEqual(ws.messages[0], { type: 'error', message: 'Name must be 200 characters or fewer' });
       assert.equal(room.participants.length, 0);
     });
 
@@ -244,7 +244,7 @@ describe('handlers', () => {
       const ws = mockWs('f1');
       await handleMessage(ws, room, { type: 'join', name: 'Alice' });
       await handleMessage(ws, room, { type: 'add_item', label: 'x'.repeat(201) });
-      assert.ok(ws.messages.some(m => m.type === 'error'));
+      assert.ok(ws.messages.some(m => m.type === 'error' && m.message === 'Item label must be 200 characters or fewer'));
       assert.equal(room.items.length, 0);
     });
 
