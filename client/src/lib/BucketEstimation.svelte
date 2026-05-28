@@ -180,6 +180,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 16px;
     margin-bottom: 20px;
   }
 
@@ -190,7 +191,9 @@
   .header-right {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 12px;
+    min-width: 0;
   }
 
   .csv-btn {
@@ -211,6 +214,9 @@
     font-size: 0.85rem;
     color: #4b5563;
     font-family: monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .error {
@@ -234,6 +240,7 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 1rem;
+    min-width: 0;
   }
 
   button.primary {
@@ -263,6 +270,8 @@
     align-items: flex-start;
     overflow-x: auto;
     padding-bottom: 8px;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .column {
@@ -316,5 +325,73 @@
 
   .item-card:active {
     cursor: grabbing;
+  }
+
+  @media (max-width: 900px) {
+    .board {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(132px, 1fr);
+    }
+
+    .column {
+      min-width: 132px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .bucket-room {
+      padding: 16px;
+    }
+
+    .header {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .header-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .add-item-bar {
+      flex-direction: column;
+    }
+
+    .add-item-bar input,
+    button.primary,
+    .csv-btn,
+    .item-card {
+      min-height: 44px;
+    }
+
+    .board {
+      gap: 10px;
+      margin-right: -16px;
+      padding-right: 16px;
+      grid-auto-columns: minmax(148px, 72vw);
+    }
+
+    .column {
+      min-height: 260px;
+      min-width: 0;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .bucket-room {
+      padding: 12px;
+    }
+
+    .header-right {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .board {
+      margin-right: -12px;
+      padding-right: 12px;
+    }
   }
 </style>

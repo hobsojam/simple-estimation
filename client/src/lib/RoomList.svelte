@@ -222,7 +222,7 @@
 
 <style>
   .room-list-section {
-    max-width: 420px;
+    width: min(420px, calc(100% - 32px));
     margin: 24px auto 0;
   }
 
@@ -311,6 +311,7 @@
     font-weight: 600;
     font-size: 0.95rem;
     color: #1e293b;
+    overflow-wrap: anywhere;
   }
 
   .room-type {
@@ -459,5 +460,46 @@
     font-size: 0.85rem;
     color: #b91c1c;
     width: 100%;
+  }
+
+  @media (max-width: 640px) {
+    .room-list-section {
+      margin-top: 18px;
+    }
+
+    .room-row {
+      padding: 12px;
+    }
+
+    .room-main {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .room-actions {
+      width: 100%;
+    }
+
+    .join-btn,
+    .delete-btn,
+    .confirm-yes-btn,
+    .confirm-cancel-btn,
+    .refresh-btn {
+      min-height: 44px;
+    }
+
+    .join-btn,
+    .delete-btn {
+      flex: 1;
+    }
+
+    .inline-confirm {
+      align-items: stretch;
+    }
+
+    .pin-input {
+      width: 100%;
+      min-height: 44px;
+    }
   }
 </style>

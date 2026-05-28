@@ -396,6 +396,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 16px;
     margin-bottom: 16px;
   }
 
@@ -406,13 +407,18 @@
   .header-right {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 12px;
+    min-width: 0;
   }
 
   .room-id {
     font-size: 0.85rem;
     color: #4b5563;
     font-family: monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .csv-btn {
@@ -449,6 +455,11 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
+  }
+
+  .active-banner strong {
+    overflow-wrap: anywhere;
   }
 
   .active-label {
@@ -494,6 +505,7 @@
     border-radius: 4px;
     background: #f9fafb;
     border: 1px solid #e5e7eb;
+    min-width: 0;
   }
 
   .participant.voted {
@@ -504,6 +516,10 @@
   .name {
     flex: 1;
     font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
 
   .badge {
@@ -603,6 +619,10 @@
     font-size: 0.75rem;
     color: #4b5563;
     margin-top: 4px;
+    max-width: 96px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .finalise-section {
@@ -676,6 +696,7 @@
   .facilitator-controls {
     display: flex;
     gap: 12px;
+    flex-wrap: wrap;
   }
 
   button.primary {
@@ -807,9 +828,7 @@
 
   .item-label {
     flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
     min-width: 0;
   }
 
@@ -897,6 +916,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
   }
 
   .timer-input {
@@ -923,5 +943,130 @@
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
+  }
+
+  @media (max-width: 1024px) {
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.4fr);
+      gap: 18px;
+    }
+
+    .sidebar,
+    .backlog {
+      width: auto;
+    }
+
+    .backlog {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .poker-room {
+      padding: 16px;
+    }
+
+    .header {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .header-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .layout {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .sidebar,
+    .backlog {
+      width: 100%;
+    }
+
+    .participant-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .active-banner {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .waiting,
+    .results,
+    .card-selector,
+    .finalise-section {
+      padding: 14px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+    }
+
+    .estimate-picker {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+    }
+
+    .estimate-btn,
+    .action-btn,
+    button.primary,
+    button.secondary,
+    .claim-form button,
+    .claim-form input,
+    .add-item-form input,
+    .add-item-form button,
+    .timer-input {
+      min-height: 44px;
+    }
+
+    .facilitator-controls {
+      flex-direction: column;
+    }
+
+    .add-item-form {
+      flex-direction: column;
+    }
+
+    .backlog-item {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .item-actions {
+      width: 100%;
+    }
+
+    .item-actions .estimate-btn-sm {
+      flex: 1;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .poker-room {
+      padding: 12px;
+    }
+
+    .participant-list {
+      grid-template-columns: 1fr;
+    }
+
+    .header-right {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .csv-btn {
+      min-height: 44px;
+    }
   }
 </style>

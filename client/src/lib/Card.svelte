@@ -15,6 +15,7 @@
   .card {
     width: 54px;
     height: 72px;
+    min-width: 0;
     font-size: 1.2rem;
     font-weight: 600;
     border: 2px solid #d1d5db;
@@ -38,5 +39,13 @@
   .card:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  @media (max-width: 720px) {
+    .card {
+      width: 100%;
+      min-width: 52px;
+      height: 68px;
+    }
   }
 </style>
