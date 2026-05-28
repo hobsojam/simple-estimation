@@ -17,6 +17,7 @@ const baseState = {
   id: 'aabbccdd-1234-5678-90ab-cdef01234567',
   type: 'bucket',
   facilitatorId: 'user-1',
+  pinProtected: true,
   revealed: false,
   participants: [{ id: 'user-1', name: 'Alice', vote: null }],
   items: [],
@@ -84,6 +85,12 @@ describe('BucketEstimation — Add Item bar', () => {
     roomState.set({ ...baseState, facilitatorId: 'someone-else' });
     const { queryByRole } = render(BucketEstimation);
     expect(queryByRole('button', { name: 'Add Item' })).not.toBeInTheDocument();
+  });
+
+  it('is shown to everyone when the room has no facilitator PIN', () => {
+    roomState.set({ ...baseState, facilitatorId: 'someone-else', pinProtected: false });
+    const { getByRole } = render(BucketEstimation);
+    expect(getByRole('button', { name: 'Add Item' })).toBeInTheDocument();
   });
 
   it('Add Item button is disabled when the input is empty', () => {

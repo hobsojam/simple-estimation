@@ -40,6 +40,7 @@ describe('sanitizeRoom', () => {
     assert.equal(result.id, 'room-1');
     assert.equal(result.type, 'planning-poker');
     assert.equal(result.name, 'Sprint 42');
+    assert.equal(result.pinProtected, true);
     assert.equal(result.facilitatorId, 'p1');
     assert.equal(result.revealed, false);
   });
@@ -47,6 +48,11 @@ describe('sanitizeRoom', () => {
   it('includes name when null', () => {
     const result = sanitizeRoom({ ...baseRoom, name: null });
     assert.equal(result.name, null);
+  });
+
+  it('sets pinProtected false when the room has no facilitator PIN', () => {
+    const result = sanitizeRoom({ ...baseRoom, pinHash: null });
+    assert.equal(result.pinProtected, false);
   });
 
   it('includes item values unchanged', () => {
@@ -115,6 +121,7 @@ describe('sanitizeRoom', () => {
     assert.equal(result.type, baseRoom.type);
     assert.equal(result.name, baseRoom.name);
     assert.equal(result.accessRequired, true);
+    assert.equal(result.pinProtected, true);
     assert.equal(result.facilitatorId, null);
     assert.equal(result.revealed, false);
     assert.deepEqual(result.participants, []);

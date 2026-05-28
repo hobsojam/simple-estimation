@@ -29,8 +29,8 @@ function sendError(ws, message) {
   return false;
 }
 
-function isFacilitator(ws, room, message) {
-  if (room.facilitatorId !== ws.participantId) {
+function isAdmin(ws, room, message) {
+  if (room.pinHash !== null && room.facilitatorId !== ws.participantId) {
     sendError(ws, message);
     return false;
   }
@@ -189,7 +189,7 @@ function handleMoveItem(ws, room, data) {
 }
 
 function handleAddItem(ws, room, data) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can add items')) return false;
+  if (!isAdmin(ws, room, 'Only the facilitator can add items')) return false;
 
   const label = validateItemLabel(ws, room, data.label);
   if (label === null) return false;
@@ -199,7 +199,7 @@ function handleAddItem(ws, room, data) {
 }
 
 function handleSelectItem(ws, room, data) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can select items')) return false;
+  if (!isAdmin(ws, room, 'Only the facilitator can select items')) return false;
   if (!data.itemId) return sendError(ws, 'itemId required');
 
   const item = findItem(room, data.itemId);
@@ -211,7 +211,7 @@ function handleSelectItem(ws, room, data) {
 }
 
 function handleFinaliseItem(ws, room, data) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can finalise items')) return false;
+  if (!isAdmin(ws, room, 'Only the facilitator can finalise items')) return false;
   if (!data.itemId) return sendError(ws, 'itemId required');
 
   const estimateStr = parseVoteValue(ws, data.estimate, 'estimate required', 'Invalid estimate value');
@@ -226,7 +226,7 @@ function handleFinaliseItem(ws, room, data) {
 }
 
 function handleRemoveItem(ws, room, data) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can remove items')) return false;
+  if (!isAdmin(ws, room, 'Only the facilitator can remove items')) return false;
   if (!data.itemId) return sendError(ws, 'itemId required');
 
   const item = findItem(room, data.itemId);
@@ -238,7 +238,7 @@ function handleRemoveItem(ws, room, data) {
 }
 
 function handleReveal(ws, room) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can reveal votes')) return false;
+  if (!isAdmin(ws, room, 'Only the facilitator can reveal votes')) return false;
 
   clearTimer(room.id);
   revealVotes(room.id);
@@ -246,14 +246,14 @@ function handleReveal(ws, room) {
 }
 
 function handleReset(ws, room) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can reset the round')) return false;
+  if (!isAdmin(ws, room, 'Only the facilitator can reset the round')) return false;
 
   resetRound(room.id);
   return true;
 }
 
 function handleStartTimer(ws, room, data) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can start the timer')) return false;
+  if (!isAdmin(ws, room, 'Only the facilitator can start the timer')) return false;
   if (room.type !== 'planning-poker') return sendError(ws, 'Timer is only available in Planning Poker rooms');
 
   const seconds = Number(data.seconds);
@@ -266,7 +266,7 @@ function handleStartTimer(ws, room, data) {
 }
 
 function handleCancelTimer(ws, room) {
-  if (!isFacilitator(ws, room, 'Only the facilitator can cancel the timer')) return false;
+  if (!isAdmin(ws, room, 'Only the facilitator can cancel the timer')) return false;
 
   clearTimer(room.id);
   return true;

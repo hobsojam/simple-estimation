@@ -19,7 +19,7 @@
   let trackedEndsAt = null;
 
   $: state = $roomState;
-  $: isFacilitator = state && $myId && state.facilitatorId === $myId;
+  $: isAdmin = state && (state.pinProtected === false || ($myId && state.facilitatorId === $myId));
   $: hasVotes = state && state.participants.some(p => p.voted);
   $: activeItem = state ? (state.items.find(i => i.status === 'active') ?? null) : null;
   $: pendingItems = state ? state.items.filter(i => i.status === 'pending') : [];
@@ -180,7 +180,7 @@
           {/each}
         </ul>
 
-        {#if !isFacilitator}
+        {#if state.pinProtected && !isAdmin}
           {#if showClaimPin}
             <div class="claim-form">
               <input
@@ -215,7 +215,7 @@
             </div>
           </div>
 
-          {#if isFacilitator && activeItem}
+          {#if isAdmin && activeItem}
             <div class="finalise-section">
               <h3>Finalise: {activeItem.label}</h3>
               {#if majority}
@@ -278,13 +278,13 @@
             <p class="timer-countdown" role="timer" aria-live="off">
               {remaining}s remaining
             </p>
-            {#if isFacilitator}
+            {#if isAdmin}
               <button class="secondary" on:click={cancelTimer}>Cancel Timer</button>
             {/if}
           </div>
         {/if}
 
-        {#if isFacilitator && !state.revealed && remaining === null}
+        {#if isAdmin && !state.revealed && remaining === null}
           <div class="timer-start">
             <label for="timer-duration" class="sr-only">Timer duration in seconds</label>
             <input
@@ -300,7 +300,7 @@
           </div>
         {/if}
 
-        {#if isFacilitator}
+        {#if isAdmin}
           <div class="facilitator-controls">
             <button class="primary" on:click={reveal} disabled={!hasVotes || state.revealed}>
               Reveal Votes
@@ -315,7 +315,7 @@
       <aside class="backlog">
         <h3>Backlog</h3>
 
-        {#if isFacilitator}
+        {#if isAdmin}
           <form class="add-item-form" on:submit|preventDefault={addItem}>
             <label for="new-item-label" class="sr-only">New item label</label>
             <input
@@ -345,7 +345,7 @@
               {#each pendingItems as item (item.id)}
                 <li class="backlog-item">
                   <span class="item-label">{item.label}</span>
-                  {#if isFacilitator}
+                  {#if isAdmin}
                     <div class="item-actions">
                       <button class="action-btn estimate-btn-sm" on:click={() => selectItem(item.id)}>
                         Estimate
@@ -378,7 +378,7 @@
         {/if}
 
         {#if state.items.length === 0}
-          <p class="empty-hint">No items yet{isFacilitator ? ' — add one above' : ''}.</p>
+          <p class="empty-hint">No items yet{isAdmin ? ' — add one above' : ''}.</p>
         {/if}
       </aside>
     </div>
