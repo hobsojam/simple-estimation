@@ -73,10 +73,11 @@ test('facilitator can remove a pending item', async ({ page }) => {
 });
 
 test('non-facilitator sees backlog but no facilitator controls', async ({ page, context }) => {
-  // Create room as Alice
+  // Create PIN-protected room as Alice
   await page.goto('/');
   await page.getByRole('tab', { name: 'Create Room' }).click();
   await page.getByLabel('Your name').fill('Alice');
+  await page.getByPlaceholder('Set a PIN to protect facilitator role').fill('1234');
   await page.getByRole('button', { name: 'Create Room' }).click();
   await expect(page.getByRole('button', { name: 'Leave Room' })).toBeVisible();
 
@@ -99,6 +100,28 @@ test('non-facilitator sees backlog but no facilitator controls', async ({ page, 
   // Bob does not see Add form or Estimate/Remove buttons
   await expect(page2.getByPlaceholder('Add item…')).not.toBeVisible();
   await expect(page2.getByRole('button', { name: 'Estimate' })).not.toBeVisible();
+});
+
+test('everyone can add items in a room without a facilitator PIN', async ({ page, context }) => {
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Create Room' }).click();
+  await page.getByLabel('Your name').fill('Alice');
+  await page.getByRole('button', { name: 'Create Room' }).click();
+  await expect(page.getByRole('button', { name: 'Leave Room' })).toBeVisible();
+
+  const roomId = new URL(page.url()).searchParams.get('room');
+
+  const bobPage = await context.newPage();
+  await bobPage.goto(`/?room=${roomId}`);
+  await bobPage.getByLabel('Your name').fill('Bob');
+  await bobPage.getByRole('button', { name: 'Join' }).click();
+  await expect(bobPage.getByRole('button', { name: 'Leave Room' })).toBeVisible();
+
+  await bobPage.getByPlaceholder('Add item…').fill('Bob can add items');
+  await bobPage.getByRole('button', { name: 'Add' }).click();
+
+  await expect(page.getByText('Bob can add items')).toBeVisible();
+  await expect(bobPage.getByText('Bob can add items')).toBeVisible();
 });
 
 test('backlog state syncs to second participant in real time', async ({ page, context }) => {

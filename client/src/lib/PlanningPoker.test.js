@@ -17,6 +17,7 @@ const baseState = {
   id: 'room-1',
   type: 'planning-poker',
   facilitatorId: 'user-1',
+  pinProtected: true,
   revealed: false,
   participants: [
     { id: 'user-1', name: 'Alice', voted: false, vote: null },
@@ -84,6 +85,7 @@ const revealedWithActiveItem = {
   id: 'room-1',
   type: 'planning-poker',
   facilitatorId: 'user-1',
+  pinProtected: true,
   revealed: true,
   participants: [{ id: 'user-1', name: 'Alice', voted: true, vote: '5' }],
   items: [{ id: 'i1', label: 'Story A', status: 'active', estimate: null }],
@@ -114,6 +116,12 @@ describe('finalise section', () => {
     roomState.set({ ...revealedWithActiveItem, facilitatorId: 'someone-else' });
     const { container } = render(PlanningPoker);
     expect(container.querySelector('.finalise-section')).toBeNull();
+  });
+
+  it('is shown to a non-facilitator when the room has no facilitator PIN', () => {
+    roomState.set({ ...revealedWithActiveItem, facilitatorId: 'someone-else', pinProtected: false });
+    const { container } = render(PlanningPoker);
+    expect(container.querySelector('.finalise-section')).not.toBeNull();
   });
 
   it('is shown when revealed, active item exists, and current user is the facilitator', () => {

@@ -10,7 +10,7 @@
   let moveAnnouncement = '';
 
   $: state = $roomState;
-  $: isFacilitator = state && $myId && state.facilitatorId === $myId;
+  $: isAdmin = state && (state.pinProtected === false || ($myId && state.facilitatorId === $myId));
   $: placedItems = state ? state.items.filter(i => i.position !== null) : [];
   $: columnsWithItems = FIBONACCI.map(fib => ({
     fib,
@@ -94,7 +94,7 @@
       <div class="error" role="alert">{$wsError}</div>
     {/if}
 
-    {#if isFacilitator}
+    {#if isAdmin}
       <div class="add-item-bar">
         <input
           type="text"

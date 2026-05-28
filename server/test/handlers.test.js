@@ -230,13 +230,25 @@ describe('handlers', () => {
 
   describe('add_item', () => {
     it('errors when called by a non-facilitator', async () => {
-      const room = createRoom('bucket', null);
-      await handleMessage(mockWs('f1'), room, { type: 'join', name: 'Alice' });
+      const pinHash = await bcrypt.hash('secret', 10);
+      const room = createRoom('bucket', pinHash);
+      await handleMessage(mockWs('f1'), room, { type: 'join', name: 'Alice', pin: 'secret' });
       const other = mockWs('p2');
       await handleMessage(other, room, { type: 'join', name: 'Bob' });
       await handleMessage(other, room, { type: 'add_item', label: 'Story' });
       assert.ok(other.messages.some(m => m.type === 'error'));
       assert.equal(room.items.length, 0);
+    });
+
+    it('allows any participant to add an item when the room has no PIN', async () => {
+      const room = createRoom('bucket', null);
+      await handleMessage(mockWs('f1'), room, { type: 'join', name: 'Alice' });
+      const other = mockWs('p2');
+      await handleMessage(other, room, { type: 'join', name: 'Bob' });
+      await handleMessage(other, room, { type: 'add_item', label: 'Story' });
+      assert.ok(!other.messages.some(m => m.type === 'error'));
+      assert.equal(room.items.length, 1);
+      assert.equal(room.items[0].label, 'Story');
     });
 
     it('errors when label exceeds 200 characters', async () => {
@@ -321,13 +333,24 @@ describe('handlers', () => {
 
   describe('reveal', () => {
     it('errors when called by a non-facilitator', async () => {
-      const room = createRoom('planning-poker', null);
-      await handleMessage(mockWs('f1'), room, { type: 'join', name: 'Alice' });
+      const pinHash = await bcrypt.hash('secret', 10);
+      const room = createRoom('planning-poker', pinHash);
+      await handleMessage(mockWs('f1'), room, { type: 'join', name: 'Alice', pin: 'secret' });
       const other = mockWs('p2');
       await handleMessage(other, room, { type: 'join', name: 'Bob' });
       await handleMessage(other, room, { type: 'reveal' });
       assert.ok(other.messages.some(m => m.type === 'error'));
       assert.equal(room.revealed, false);
+    });
+
+    it('allows any participant to reveal when the room has no PIN', async () => {
+      const room = createRoom('planning-poker', null);
+      await handleMessage(mockWs('f1'), room, { type: 'join', name: 'Alice' });
+      const other = mockWs('p2');
+      await handleMessage(other, room, { type: 'join', name: 'Bob' });
+      await handleMessage(other, room, { type: 'reveal' });
+      assert.ok(!other.messages.some(m => m.type === 'error'));
+      assert.equal(room.revealed, true);
     });
 
     it('facilitator can reveal', async () => {
@@ -341,10 +364,11 @@ describe('handlers', () => {
 
   describe('reset', () => {
     it('errors when called by a non-facilitator', async () => {
-      const room = createRoom('planning-poker', null);
+      const pinHash = await bcrypt.hash('secret', 10);
+      const room = createRoom('planning-poker', pinHash);
       const facilitator = mockWs('f1');
       const other = mockWs('p2');
-      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice', pin: 'secret' });
       await handleMessage(other, room, { type: 'join', name: 'Bob' });
       await handleMessage(facilitator, room, { type: 'vote', vote: '5' });
       await handleMessage(facilitator, room, { type: 'reveal' });
@@ -398,15 +422,28 @@ describe('handlers', () => {
 
   describe('select_item', () => {
     it('errors when called by a non-facilitator', async () => {
-      const room = createRoom('planning-poker', null);
+      const pinHash = await bcrypt.hash('secret', 10);
+      const room = createRoom('planning-poker', pinHash);
       const facilitator = mockWs('f1');
       const other = mockWs('p2');
-      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice', pin: 'secret' });
       await handleMessage(other, room, { type: 'join', name: 'Bob' });
       await handleMessage(facilitator, room, { type: 'add_item', label: 'Story A' });
       await handleMessage(other, room, { type: 'select_item', itemId: room.items[0].id });
       assert.ok(other.messages.some(m => m.type === 'error'));
       assert.equal(room.items[0].status, 'pending');
+    });
+
+    it('allows any participant to select items when the room has no PIN', async () => {
+      const room = createRoom('planning-poker', null);
+      const facilitator = mockWs('f1');
+      const other = mockWs('p2');
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(other, room, { type: 'join', name: 'Bob' });
+      await handleMessage(other, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(other, room, { type: 'select_item', itemId: room.items[0].id });
+      assert.ok(!other.messages.some(m => m.type === 'error'));
+      assert.equal(room.items[0].status, 'active');
     });
 
     it('errors when itemId is missing', async () => {
@@ -475,10 +512,11 @@ describe('handlers', () => {
 
   describe('finalise_item', () => {
     it('errors when called by a non-facilitator', async () => {
-      const room = createRoom('planning-poker', null);
+      const pinHash = await bcrypt.hash('secret', 10);
+      const room = createRoom('planning-poker', pinHash);
       const facilitator = mockWs('f1');
       const other = mockWs('p2');
-      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice', pin: 'secret' });
       await handleMessage(other, room, { type: 'join', name: 'Bob' });
       await handleMessage(facilitator, room, { type: 'add_item', label: 'Story A' });
       await handleMessage(facilitator, room, { type: 'select_item', itemId: room.items[0].id });
@@ -563,10 +601,11 @@ describe('handlers', () => {
 
   describe('remove_item', () => {
     it('errors when called by a non-facilitator', async () => {
-      const room = createRoom('planning-poker', null);
+      const pinHash = await bcrypt.hash('secret', 10);
+      const room = createRoom('planning-poker', pinHash);
       const facilitator = mockWs('f1');
       const other = mockWs('p2');
-      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice', pin: 'secret' });
       await handleMessage(other, room, { type: 'join', name: 'Bob' });
       await handleMessage(facilitator, room, { type: 'add_item', label: 'Story A' });
       await handleMessage(other, room, { type: 'remove_item', itemId: room.items[0].id });
@@ -639,10 +678,11 @@ describe('handlers', () => {
 
   describe('start_timer', () => {
     it('errors when called by a non-facilitator', async () => {
-      const room = createRoom('planning-poker', null);
+      const pinHash = await bcrypt.hash('secret', 10);
+      const room = createRoom('planning-poker', pinHash);
       const facilitator = mockWs('f1');
       const other = mockWs('p2');
-      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice', pin: 'secret' });
       await handleMessage(other, room, { type: 'join', name: 'Bob' });
       await handleMessage(other, room, { type: 'start_timer', seconds: 30 });
       assert.ok(other.messages.some(m => m.type === 'error'));
@@ -690,10 +730,11 @@ describe('handlers', () => {
 
   describe('cancel_timer', () => {
     it('errors when called by a non-facilitator', async () => {
-      const room = createRoom('planning-poker', null);
+      const pinHash = await bcrypt.hash('secret', 10);
+      const room = createRoom('planning-poker', pinHash);
       const facilitator = mockWs('f1');
       const other = mockWs('p2');
-      await handleMessage(facilitator, room, { type: 'join', name: 'Alice' });
+      await handleMessage(facilitator, room, { type: 'join', name: 'Alice', pin: 'secret' });
       await handleMessage(other, room, { type: 'join', name: 'Bob' });
       await handleMessage(facilitator, room, { type: 'start_timer', seconds: 60 });
       const endsAt = room.timer.endsAt;
