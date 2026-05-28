@@ -60,6 +60,10 @@
     dragItemId = null;
   }
 
+  function moveItemToPosition(itemId, position) {
+    send({ type: 'move_item', itemId, position: position || null });
+  }
+
   function onItemKeydown(event, item) {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
@@ -113,17 +117,32 @@
       >
         <div class="sidebar-header">Unplaced</div>
         {#each unplaced as item (item.id)}
-          <div
-            class="item-card"
-            role="button"
-            tabindex="0"
-            draggable="true"
-            aria-describedby="relative-kb-hint"
-            on:dragstart={(e) => onDragStart(e, item.id)}
-            on:dragend={onDragEnd}
-            on:keydown={(e) => onItemKeydown(e, item)}
-          >
-            {item.label}
+          <div class="item-shell">
+            <div
+              class="item-card"
+              role="button"
+              tabindex="0"
+              draggable="true"
+              aria-describedby="relative-kb-hint"
+              on:dragstart={(e) => onDragStart(e, item.id)}
+              on:dragend={onDragEnd}
+              on:keydown={(e) => onItemKeydown(e, item)}
+            >
+              {item.label}
+            </div>
+            <label class="move-control">
+              <span>Move to</span>
+              <select
+                aria-label={`Move ${item.label} to estimate`}
+                value={item.position ?? ''}
+                on:change={(e) => moveItemToPosition(item.id, e.target.value)}
+              >
+                <option value="">Unplaced</option>
+                {#each FIBONACCI as fib (fib)}
+                  <option value={String(fib)}>{fib}</option>
+                {/each}
+              </select>
+            </label>
           </div>
         {/each}
         {#if unplaced.length === 0}
@@ -145,17 +164,32 @@
               <div class="fib-header">{column.fib}</div>
               <div class="fib-items">
                 {#each column.items as item (item.id)}
-                  <div
-                    class="item-card"
-                    role="button"
-                    tabindex="0"
-                    draggable="true"
-                    aria-describedby="relative-kb-hint"
-                    on:dragstart={(e) => onDragStart(e, item.id)}
-                    on:dragend={onDragEnd}
-                    on:keydown={(e) => onItemKeydown(e, item)}
-                  >
-                    {item.label}
+                  <div class="item-shell">
+                    <div
+                      class="item-card"
+                      role="button"
+                      tabindex="0"
+                      draggable="true"
+                      aria-describedby="relative-kb-hint"
+                      on:dragstart={(e) => onDragStart(e, item.id)}
+                      on:dragend={onDragEnd}
+                      on:keydown={(e) => onItemKeydown(e, item)}
+                    >
+                      {item.label}
+                    </div>
+                    <label class="move-control">
+                      <span>Move to</span>
+                      <select
+                        aria-label={`Move ${item.label} to estimate`}
+                        value={item.position ?? ''}
+                        on:change={(e) => moveItemToPosition(item.id, e.target.value)}
+                      >
+                        <option value="">Unplaced</option>
+                        {#each FIBONACCI as fib (fib)}
+                          <option value={String(fib)}>{fib}</option>
+                        {/each}
+                      </select>
+                    </label>
                   </div>
                 {/each}
               </div>
@@ -357,6 +391,12 @@
     gap: 6px;
   }
 
+  .item-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
   .item-card {
     background: #fff;
     border: 1px solid #d1d5db;
@@ -376,6 +416,28 @@
 
   .item-card:active {
     cursor: grabbing;
+  }
+
+  .move-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: #4b5563;
+  }
+
+  .move-control span {
+    flex-shrink: 0;
+  }
+
+  .move-control select {
+    min-width: 0;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: #fff;
+    font: inherit;
   }
 
   @media (max-width: 900px) {
@@ -426,7 +488,8 @@
     .add-item-bar input,
     button.primary,
     .csv-btn,
-    .item-card {
+    .item-card,
+    .move-control select {
       min-height: 44px;
     }
 

@@ -56,3 +56,27 @@ test('relative: item remains visible after placement and can move to another est
   await expect(secondEstimate.getByRole('button', { name: itemLabel })).toBeVisible();
   await expect(firstEstimate.getByRole('button', { name: itemLabel })).not.toBeVisible();
 });
+
+test('bucket: item can be placed with touch-friendly controls on mobile', async ({ page, request }) => {
+  const itemLabel = 'Mobile bucket placement';
+  await page.setViewportSize({ width: 360, height: 780 });
+  await joinRoom(page, request, 'bucket');
+  await addItem(page, itemLabel);
+
+  await page.getByLabel(`Move ${itemLabel} to bucket`).selectOption('M');
+
+  const mediumBucket = page.getByRole('region', { name: 'M', exact: true });
+  await expect(mediumBucket.getByRole('button', { name: itemLabel })).toBeVisible();
+});
+
+test('relative: item can be placed with touch-friendly controls on mobile', async ({ page, request }) => {
+  const itemLabel = 'Mobile relative placement';
+  await page.setViewportSize({ width: 360, height: 780 });
+  await joinRoom(page, request, 'relative');
+  await addItem(page, itemLabel);
+
+  await page.getByLabel(`Move ${itemLabel} to estimate`).selectOption('8');
+
+  const estimateColumn = page.getByRole('region', { name: '8', exact: true });
+  await expect(estimateColumn.getByRole('button', { name: itemLabel })).toBeVisible();
+});

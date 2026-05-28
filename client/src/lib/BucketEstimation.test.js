@@ -150,6 +150,30 @@ describe('BucketEstimation — item placement', () => {
     });
     expect(within(sourceColumn).queryByRole('button', { name: 'Story A' })).not.toBeInTheDocument();
   });
+
+  it('sends move_item when the placement select changes', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: null }],
+    });
+    const { getByLabelText } = render(BucketEstimation);
+
+    await fireEvent.change(getByLabelText('Move Story A to bucket'), { target: { value: 'M' } });
+
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: 'M' });
+  });
+
+  it('sends null when the placement select moves an item back to Unsized', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: 'M' }],
+    });
+    const { getByLabelText } = render(BucketEstimation);
+
+    await fireEvent.change(getByLabelText('Move Story A to bucket'), { target: { value: '' } });
+
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: null });
+  });
 });
 
 // BUCKETS order: null (Unsized), XS, S, M, L, XL

@@ -150,6 +150,30 @@ describe('RelativeEstimation — item placement', () => {
     });
     expect(within(sourceColumn).queryByRole('button', { name: 'Story A' })).not.toBeInTheDocument();
   });
+
+  it('sends move_item when the placement select changes', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: null }],
+    });
+    const { getByLabelText } = render(RelativeEstimation);
+
+    await fireEvent.change(getByLabelText('Move Story A to estimate'), { target: { value: '8' } });
+
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: '8' });
+  });
+
+  it('sends null when the placement select moves an item back to Unplaced', async () => {
+    roomState.set({
+      ...baseState,
+      items: [{ id: 'i1', label: 'Story A', position: '8' }],
+    });
+    const { getByLabelText } = render(RelativeEstimation);
+
+    await fireEvent.change(getByLabelText('Move Story A to estimate'), { target: { value: '' } });
+
+    expect(send).toHaveBeenCalledWith({ type: 'move_item', itemId: 'i1', position: null });
+  });
 });
 
 // ALL_POSITIONS order: null (Unplaced), '1', '2', '3', '5', '8', '13', '21'
