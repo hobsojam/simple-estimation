@@ -20,7 +20,7 @@
     "@vitest/browser-playwright": "^4.1.6",
     "@vitest/coverage-v8": "^4.1.6",
     "esbuild": "^0.28.0",
-    "eslint": "^9.39.4",
+    "eslint": "^10.4.0",
     "eslint-plugin-svelte": "^3.18.0",
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
