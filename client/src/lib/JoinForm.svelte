@@ -139,7 +139,7 @@
 
 <style>
   .join-form {
-    max-width: 420px;
+    width: min(420px, calc(100% - 32px));
     margin: 80px auto;
     padding: 32px;
     border: 1px solid #ddd;
@@ -228,5 +228,28 @@
   button.primary:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  @media (max-width: 640px) {
+    .join-form {
+      margin: 32px auto;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 18px;
+      font-size: 1.45rem;
+    }
+
+    .tabs {
+      margin-bottom: 18px;
+    }
+
+    .tab,
+    button.primary,
+    input,
+    select {
+      min-height: 44px;
+    }
   }
 </style>

@@ -268,6 +268,7 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: #f8fafc;
     color: #1e293b;
+    overflow-x: hidden;
   }
 
   .app {
@@ -335,7 +336,7 @@
   }
 
   .name-prompt {
-    max-width: 380px;
+    width: min(380px, calc(100% - 32px));
     margin: 80px auto;
     padding: 32px;
     background: #fff;
@@ -418,6 +419,7 @@
   .top-bar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 16px;
     padding: 10px 24px;
     background: #fff;
@@ -442,6 +444,48 @@
     font-size: 0.95rem;
     font-weight: 600;
     color: #1e293b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    .version-badge {
+      right: 8px;
+      bottom: 8px;
+      font-size: 0.68rem;
+    }
+
+    .demo-banner {
+      padding: 10px 16px;
+      font-size: 0.82rem;
+      text-align: left;
+    }
+
+    .create-error {
+      width: calc(100% - 32px);
+      margin: -48px auto 0;
+    }
+
+    .name-prompt {
+      margin: 32px auto;
+      padding: 20px;
+    }
+
+    .prompt-actions {
+      flex-direction: column-reverse;
+    }
+
+    .top-bar {
+      padding: 10px 16px;
+      gap: 10px;
+    }
+
+    .leave-btn,
+    .primary,
+    .secondary {
+      min-height: 44px;
+    }
   }
 
 </style>

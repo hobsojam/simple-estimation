@@ -190,6 +190,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 16px;
     margin-bottom: 20px;
   }
 
@@ -200,7 +201,9 @@
   .header-right {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 12px;
+    min-width: 0;
   }
 
   .csv-btn {
@@ -221,6 +224,9 @@
     font-size: 0.85rem;
     color: #4b5563;
     font-family: monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .error {
@@ -244,6 +250,7 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 1rem;
+    min-width: 0;
   }
 
   button.primary {
@@ -305,6 +312,8 @@
   .scale {
     flex: 1;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .scale-label {
@@ -367,5 +376,88 @@
 
   .item-card:active {
     cursor: grabbing;
+  }
+
+  @media (max-width: 900px) {
+    .layout {
+      flex-direction: column;
+    }
+
+    .sidebar {
+      width: 100%;
+      min-height: auto;
+    }
+
+    .scale {
+      width: 100%;
+    }
+
+    .columns {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(104px, 1fr);
+    }
+
+    .fib-column {
+      min-width: 104px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .relative-room {
+      padding: 16px;
+    }
+
+    .header {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .header-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .add-item-bar {
+      flex-direction: column;
+    }
+
+    .add-item-bar input,
+    button.primary,
+    .csv-btn,
+    .item-card {
+      min-height: 44px;
+    }
+
+    .scale {
+      margin-right: -16px;
+      padding-right: 16px;
+    }
+
+    .columns {
+      grid-auto-columns: minmax(116px, 54vw);
+    }
+
+    .fib-column {
+      min-height: 260px;
+      min-width: 0;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .relative-room {
+      padding: 12px;
+    }
+
+    .header-right {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .scale {
+      margin-right: -12px;
+      padding-right: 12px;
+    }
   }
 </style>
