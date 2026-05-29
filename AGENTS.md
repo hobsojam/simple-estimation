@@ -119,13 +119,13 @@ cd client && npm install && npm run dev
 
 Vite proxies WebSocket connections to `localhost:3000` so the dev server works against the local Node backend without CORS issues.
 
-When changing client UI or any Svelte source, verify the production build before opening a PR:
+When changing client UI or any Svelte source, verify that the client still builds:
 
 ```bash
 cd client && npm run build
 ```
 
-Do not commit generated static bundles. Docker and CI build them from `client/dist`; for local direct-server checks, run the server with `STATIC_DIR` pointing at `client/dist`.
+Do **not** commit `client/dist` or `server/public`. These are generated static bundles and are intentionally ignored. Docker and CI recreate them from source. If you need to run the Express server locally against a production client build, either point `STATIC_DIR` at `client/dist` or copy the build into `server/public` for local testing only; leave those files untracked.
 
 ## Docker
 
@@ -178,7 +178,7 @@ If this becomes a persistent problem (more deps with platform-specific optional 
 - Never commit directly to `main`
 - Always include the co-author trailer in commit messages:
   ```
-  Co-Authored-By: Claude Code <noreply@anthropic.com>
+  Co-Authored-By: Codex <noreply@anthropic.com>
   ```
 - Never force-push to `main`
 
