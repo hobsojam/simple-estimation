@@ -23,7 +23,7 @@ jobs:
           cache-dependency-path: server/package-lock.json
       - run: npm ci
         working-directory: server
-      - run: npx c8 --reporter=lcov node --test test/rooms.test.js test/handlers.test.js test/api.test.js test/protocol.test.js test/sanitize.test.js test/sweep.test.js test/ws.test.js
+      - run: npx c8 --reporter=lcov npm test
         working-directory: server
       - run: npx stryker run
         working-directory: server
