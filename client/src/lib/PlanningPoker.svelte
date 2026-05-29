@@ -17,6 +17,8 @@
   let remaining = null;
   let timerId = null;
   let trackedEndsAt = null;
+  let timerServerNow = null;
+  let timerReceivedAt = null;
 
   $: state = $roomState;
   $: isAdmin = state && (state.pinProtected === false || ($myId && state.facilitatorId === $myId));
@@ -43,7 +45,9 @@
   }
 
   function tickTimer() {
-    remaining = Math.max(0, Math.ceil((trackedEndsAt - Date.now()) / 1000));
+    const elapsed = Date.now() - timerReceivedAt;
+    const estimatedServerNow = timerServerNow + elapsed;
+    remaining = Math.max(0, Math.ceil((trackedEndsAt - estimatedServerNow) / 1000));
     if (remaining <= 0) {
       clearInterval(timerId);
       timerId = null;
@@ -53,14 +57,17 @@
   // Sync client-side countdown with server timer state
   $: {
     const endsAt = state?.timer?.endsAt ?? null;
-    if (endsAt !== trackedEndsAt) {
+    const serverNow = state?.timer?.serverNow ?? Date.now();
+    if (endsAt !== trackedEndsAt || serverNow !== timerServerNow) {
       trackedEndsAt = endsAt;
+      timerServerNow = serverNow;
+      timerReceivedAt = Date.now();
       if (timerId) {
         clearInterval(timerId);
         timerId = null;
       }
       if (endsAt !== null) {
-        remaining = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+        tickTimer();
         timerId = setInterval(tickTimer, 250);
       } else {
         remaining = null;

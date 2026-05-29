@@ -1,4 +1,6 @@
 function sanitizeRoom(room, isAuthorized = true) {
+  const now = Date.now();
+
   if (!isAuthorized) {
     return {
       id: room.id,
@@ -20,7 +22,7 @@ function sanitizeRoom(room, isAuthorized = true) {
     pinProtected: room.pinHash !== null,
     facilitatorId: room.facilitatorId,
     revealed: room.revealed,
-    timer: room.timer || { endsAt: null, durationSeconds: null },
+    timer: { ...(room.timer || { endsAt: null, durationSeconds: null }), serverNow: now },
     participants: room.participants.map(p => ({
       id: p.id,
       name: p.name,

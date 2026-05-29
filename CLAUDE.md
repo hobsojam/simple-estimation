@@ -81,6 +81,8 @@ When broadcasting state to clients:
 
 ## WebSocket Message Protocol
 
+`docs/api.md` is the source of truth for HTTP endpoints, WebSocket messages, sanitized room state, timer state, error payloads, and close codes. If any client-visible API or protocol behavior changes, update `docs/api.md` in the same PR. Do not make protocol changes only for the web client without considering native clients.
+
 All messages are JSON. Inbound (client → server):
 
 | type | Payload | Notes |
@@ -148,6 +150,7 @@ Static files are served from `./public` in production. The `STATIC_DIR` env var 
 - No comments unless the WHY is non-obvious
 - No external cloud dependencies — all runtime deps must be `npm` packages only
 - Server code never sends `pinHash` to any client under any circumstance
+- Server code never sends `accessPinHash` to any client under any circumstance
 - All inbound WebSocket messages must be validated before acting on them (check required fields, check facilitator permissions)
 - Facilitator-only actions (`reveal`, `reset`, `add_item`) must verify `ws.participantId === room.facilitatorId` server-side — never trust the client
 

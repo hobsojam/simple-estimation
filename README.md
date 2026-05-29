@@ -77,6 +77,8 @@ No external services. No database. No cloud dependencies.
 
 The Svelte app is built at Docker image build time and served as static files. WebSocket connections share the same port as HTTP via an HTTP upgrade.
 
+For native clients or integrations, see the full HTTP and WebSocket contract in [docs/api.md](docs/api.md).
+
 ### WebSocket Message Protocol
 
 All messages are JSON. Direction noted as C→S (client to server) or S→C (server to client).
@@ -109,8 +111,8 @@ The `state` message sent to clients contains the sanitized room (pin hash is nev
   name: string | null,
   facilitatorId: string | null,
   revealed: boolean,
-  timer: { endsAt: number | null, durationSeconds: number | null },
-  // endsAt is a Unix ms timestamp; null when no timer is running
+  timer: { endsAt: number | null, durationSeconds: number | null, serverNow: number },
+  // endsAt and serverNow are Unix ms timestamps; endsAt is null when no timer is running
   participants: [{ id, name, voted: boolean, vote: string | null }],
   // vote is null until revealed; voted indicates whether a card was placed
 
