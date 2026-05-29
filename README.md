@@ -77,6 +77,8 @@ No external services. No database. No cloud dependencies.
 
 The Svelte app is built at Docker image build time and served as static files. WebSocket connections share the same port as HTTP via an HTTP upgrade.
 
+For native clients or integrations, see the full HTTP and WebSocket contract in [docs/api.md](docs/api.md).
+
 ### WebSocket Message Protocol
 
 All messages are JSON. Direction noted as C→S (client to server) or S→C (server to client).
