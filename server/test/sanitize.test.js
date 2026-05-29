@@ -96,14 +96,24 @@ describe('sanitizeRoom', () => {
 
   it('includes timer state when room has a timer', () => {
     const timer = { endsAt: 9_999_999, durationSeconds: 60 };
+    const before = Date.now();
     const result = sanitizeRoom({ ...baseRoom, timer });
-    assert.deepEqual(result.timer, timer);
+    const after = Date.now();
+    assert.equal(result.timer.endsAt, timer.endsAt);
+    assert.equal(result.timer.durationSeconds, timer.durationSeconds);
+    assert.ok(result.timer.serverNow >= before);
+    assert.ok(result.timer.serverNow <= after);
   });
 
   it('uses null defaults for timer when room.timer is undefined', () => {
     const { timer: _timer, ...roomWithoutTimer } = baseRoom;
+    const before = Date.now();
     const result = sanitizeRoom(roomWithoutTimer);
-    assert.deepEqual(result.timer, { endsAt: null, durationSeconds: null });
+    const after = Date.now();
+    assert.equal(result.timer.endsAt, null);
+    assert.equal(result.timer.durationSeconds, null);
+    assert.ok(result.timer.serverNow >= before);
+    assert.ok(result.timer.serverNow <= after);
   });
 
   it('passes through bucket/relative item shape (position field) unchanged', () => {

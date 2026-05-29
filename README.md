@@ -111,8 +111,8 @@ The `state` message sent to clients contains the sanitized room (pin hash is nev
   name: string | null,
   facilitatorId: string | null,
   revealed: boolean,
-  timer: { endsAt: number | null, durationSeconds: number | null },
-  // endsAt is a Unix ms timestamp; null when no timer is running
+  timer: { endsAt: number | null, durationSeconds: number | null, serverNow: number },
+  // endsAt and serverNow are Unix ms timestamps; endsAt is null when no timer is running
   participants: [{ id, name, voted: boolean, vote: string | null }],
   // vote is null until revealed; voted indicates whether a card was placed
 

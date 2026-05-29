@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, fireEvent } from '@testing-library/svelte';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { tick } from 'svelte';
+import { render, fireEvent, cleanup } from '@testing-library/svelte';
 import PlanningPoker from './PlanningPoker.svelte';
 import { roomState, send } from '../ws.js';
 
@@ -175,5 +176,39 @@ describe('PlanningPoker — outbound messages', () => {
     const { getByRole } = render(PlanningPoker);
     await fireEvent.click(getByRole('button', { name: 'Reset Round' }));
     expect(send).toHaveBeenCalledWith({ type: 'reset' });
+  });
+});
+
+describe('PlanningPoker — timer countdown', () => {
+  beforeEach(() => {
+    roomState.set(null);
+    send.mockClear();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  it('uses serverNow to compensate for client clock skew', async () => {
+    vi.setSystemTime(10_000);
+    roomState.set({
+      ...baseState,
+      timer: {
+        endsAt: 65_000,
+        durationSeconds: 60,
+        serverNow: 5_000,
+      },
+    });
+
+    const { getByRole } = render(PlanningPoker);
+
+    expect(getByRole('timer')).toHaveTextContent('60s remaining');
+
+    vi.advanceTimersByTime(10_000);
+    await tick();
+
+    expect(getByRole('timer')).toHaveTextContent('50s remaining');
   });
 });

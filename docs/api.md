@@ -189,7 +189,8 @@ Sent by the server after connection and after valid state-changing messages.
     "revealed": false,
     "timer": {
       "endsAt": null,
-      "durationSeconds": null
+      "durationSeconds": null,
+      "serverNow": 1843239150000
     },
     "participants": [
       {
@@ -450,9 +451,10 @@ Rules:
 - `seconds` must be an integer from 5 to 300.
 - When the timer expires, the server clears the timer and reveals votes.
 
-Current timer caveat: clients calculate countdowns from their local clock using
-`timer.endsAt`. A future protocol change should include server time in timer
-state so native and web clients can compensate for clock skew.
+Timer countdowns should use `timer.endsAt` and `timer.serverNow`. Use
+`serverNow` as the server-clock value at receipt time, then add locally elapsed
+time to estimate the current server time. This avoids displaying incorrect
+countdowns when a client clock is ahead of or behind the server clock.
 
 ### `cancel_timer`
 
