@@ -72,8 +72,9 @@ Fields:
 
 - `type` is required.
 - `name` is optional. Empty or missing names are stored as `null`.
-- `pin` is optional. When present, facilitator-only WebSocket actions require
-  facilitator ownership.
+- `pin` is optional. When present, admin WebSocket actions require facilitator
+  ownership. When omitted, joined participants can administer the room
+  collaboratively.
 - `accessPin` is optional. When present, joining over WebSocket requires the
   access PIN.
 
@@ -170,8 +171,22 @@ The server also rate-limits each WebSocket connection to 30 messages per second.
 All WebSocket messages are JSON objects with a `type` field.
 
 Room-type applicability in this document describes how clients should use the
-protocol. Some older server handlers are more permissive than the intended
-contract; the Android readiness plan tracks tightening those validations.
+protocol.
+
+### Admin Authorization
+
+The facilitator PIN controls who can run room administration actions:
+
+- Rooms without a facilitator PIN are collaboratively administered. Any joined,
+  authorized participant may add/select/finalize/remove items, reveal/reset
+  votes, and start/cancel timers.
+- Rooms with a facilitator PIN require the socket's `participantId` to match
+  `room.facilitatorId` for those admin actions.
+- Clients should show admin controls when `room.pinProtected === false` or the
+  local persisted `participantId` equals `room.facilitatorId`.
+
+The access PIN is separate. It only controls whether a participant may join and
+see the room state.
 
 ### Outbound: `state`
 
@@ -321,7 +336,7 @@ Behavior:
 
 ### `add_item`
 
-Adds an item. Intended to be facilitator-only.
+Adds an item. This is an admin action.
 
 ```json
 {
@@ -353,8 +368,8 @@ Bucket and relative-estimation items are created with:
 
 ### `select_item`
 
-Selects the active Planning Poker item and clears current votes. Intended to be
-facilitator-only.
+Selects the active Planning Poker item and clears current votes. This is an
+admin action.
 
 ```json
 {
@@ -371,8 +386,7 @@ Rules:
 
 ### `finalise_item`
 
-Finalizes the active Planning Poker item estimate. Intended to be
-facilitator-only.
+Finalizes the active Planning Poker item estimate. This is an admin action.
 
 ```json
 {
@@ -391,7 +405,7 @@ Rules:
 
 ### `remove_item`
 
-Removes a pending Planning Poker item. Intended to be facilitator-only.
+Removes a pending Planning Poker item. This is an admin action.
 
 ```json
 {
@@ -408,7 +422,7 @@ Rules:
 
 ### `reveal`
 
-Reveals votes. Intended to be facilitator-only.
+Reveals votes. This is an admin action.
 
 ```json
 {
@@ -420,7 +434,7 @@ Also clears any active Planning Poker timer.
 
 ### `reset`
 
-Resets the current Planning Poker round. Intended to be facilitator-only.
+Resets the current Planning Poker round. This is an admin action.
 
 ```json
 {
@@ -436,7 +450,7 @@ Behavior:
 
 ### `start_timer`
 
-Starts a Planning Poker timer. Intended to be facilitator-only.
+Starts a Planning Poker timer. This is an admin action.
 
 ```json
 {
@@ -458,7 +472,7 @@ countdowns when a client clock is ahead of or behind the server clock.
 
 ### `cancel_timer`
 
-Cancels a Planning Poker timer. Intended to be facilitator-only.
+Cancels a Planning Poker timer. This is an admin action.
 
 ```json
 {
@@ -474,10 +488,9 @@ Cancels a Planning Poker timer. Intended to be facilitator-only.
   `accessPin` in the first `join`.
 - Treat `state.room` as the source of truth. The server broadcasts the full
   sanitized room after accepted state changes.
-- Do not infer facilitator status from local UI state. Compare the persisted
-  `participantId` with `room.facilitatorId`.
-- Only show facilitator controls when the local `participantId` matches
-  `room.facilitatorId`, even for rooms without a facilitator PIN.
+- Do not infer admin status from local UI state. Show admin controls when
+  `room.pinProtected === false` or the persisted local `participantId` matches
+  `room.facilitatorId`.
 - Handle WebSocket close codes separately from in-band `error` messages.
 - Preserve unknown fields in local models where practical. The protocol is not
   formally versioned yet.

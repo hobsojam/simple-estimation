@@ -22,16 +22,16 @@ This instance is for demonstration only. We make no promise that it will be avai
 - Facilitator creates a room (with an optional name) and shares a link
 - Participants join with a display name
 - Each participant selects a Fibonacci card (1, 2, 3, 5, 8, 13, 21, ?, ∞, ☕)
-- Cards stay hidden until the facilitator reveals them
-- **Backlog**: facilitator adds named stories to a queue; one item is active at a time
-- After reveal, the facilitator accepts the majority vote (or picks a custom value) to finalise the item
+- Cards stay hidden until an admin reveals them
+- **Backlog**: admins add named stories to a queue; one item is active at a time
+- After reveal, an admin accepts the majority vote (or picks a custom value) to finalise the item
 - Finalised items appear in a Done history with their agreed estimate
 - **CSV export**: download a two-column spreadsheet (`Item, Estimate`) for all done items
-- Facilitator can start a countdown timer (5–300 seconds); votes auto-reveal when it expires
-- Facilitator can reset the round for re-voting on the same story
+- Admins can start a countdown timer (5-300 seconds); votes auto-reveal when it expires
+- Admins can reset the round for re-voting on the same story
 
 ### Magic Estimation — Bucket Mode
-- Facilitator creates a set of items (user stories, tasks)
+- Admins create a set of items (user stories, tasks)
 - Participants collaboratively drag items into size buckets (XS, S, M, L, XL)
 - All moves are visible in real time
 
@@ -42,8 +42,10 @@ This instance is for demonstration only. We make no promise that it will be avai
 
 ### Room Management
 - Each room has a type: Planning Poker, Bucket Estimation, or Relative Estimation
-- Rooms are created with an optional facilitator pin
-- Anyone with the pin can claim the facilitator role
+- Rooms are created with an optional facilitator PIN
+- Rooms without a facilitator PIN are collaboratively administered by all joined participants
+- Rooms with a facilitator PIN restrict admin actions to the participant who has claimed the facilitator role
+- Anyone with the facilitator PIN can claim the facilitator role
 - Room state is ephemeral — lost on server restart (acceptable for live sessions)
 
 ## Tech Stack
@@ -82,23 +84,25 @@ For native clients or integrations, see the full HTTP and WebSocket contract in 
 ### WebSocket Message Protocol
 
 All messages are JSON. Direction noted as C→S (client to server) or S→C (server to client).
+Admin actions are available to all joined participants in rooms without a facilitator PIN.
+In rooms with a facilitator PIN, admin actions require facilitator ownership.
 
 | Message | Direction | Description |
 |---|---|---|
-| `join` | C→S | Join a room with a display name and optional pin |
-| `claim_facilitator` | C→S | Claim facilitator role using the room pin |
+| `join` | C→S | Join a room with a display name and optional PIN |
+| `claim_facilitator` | C→S | Claim facilitator role using the facilitator PIN |
 | `vote` | C→S | Cast a vote (Planning Poker) |
-| `add_item` | C→S | Facilitator adds a named item to the backlog |
-| `select_item` | C→S | Facilitator sets a backlog item active; resets current votes (Planning Poker) |
-| `finalise_item` | C→S | Facilitator records the agreed estimate for the active item (Planning Poker) |
-| `remove_item` | C→S | Facilitator removes a pending item from the backlog (Planning Poker) |
+| `add_item` | C→S | Admin adds a named item to the backlog |
+| `select_item` | C→S | Admin sets a backlog item active; resets current votes (Planning Poker) |
+| `finalise_item` | C→S | Admin records the agreed estimate for the active item (Planning Poker) |
+| `remove_item` | C→S | Admin removes a pending item from the backlog (Planning Poker) |
 | `move_item` | C→S | Move an item to a bucket or position (Magic Estimation) |
-| `reveal` | C→S | Facilitator reveals all votes |
-| `reset` | C→S | Facilitator resets the round |
-| `start_timer` | C→S | Facilitator starts a countdown timer (5–300 s); votes auto-reveal on expiry (Planning Poker) |
-| `cancel_timer` | C→S | Facilitator cancels the running countdown (Planning Poker) |
+| `reveal` | C→S | Admin reveals all votes |
+| `reset` | C→S | Admin resets the round |
+| `start_timer` | C→S | Admin starts a countdown timer (5-300 s); votes auto-reveal on expiry (Planning Poker) |
+| `cancel_timer` | C→S | Admin cancels the running countdown (Planning Poker) |
 | `state` | S→C | Full room state broadcast to all participants |
-| `error` | S→C | Error message (e.g. wrong pin) |
+| `error` | S→C | Error message (e.g. wrong PIN) |
 
 ### Room State Shape
 
