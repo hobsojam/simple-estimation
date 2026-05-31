@@ -1036,6 +1036,10 @@
       min-height: 44px;
     }
 
+    .action-btn {
+      min-width: 44px;
+    }
+
     .facilitator-controls {
       flex-direction: column;
     }

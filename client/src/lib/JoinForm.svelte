@@ -252,4 +252,10 @@
       min-height: 44px;
     }
   }
+
+  @media (max-height: 600px) {
+    .join-form {
+      margin: 16px auto;
+    }
+  }
 </style>
