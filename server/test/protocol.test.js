@@ -321,6 +321,24 @@ describe('WebSocket protocol contract', () => {
     }
   });
 
+  it('rejects move_item positions outside the room-type contract', async () => {
+    const room = createRoom('bucket', null, 'Bucket room');
+    const ws = connect(room.id, 'p1');
+    await sendMessage(ws, { type: 'join', name: 'Alice' });
+    await sendMessage(ws, { type: 'add_item', label: 'Story A' });
+    const itemId = latestState(ws).items[0].id;
+    ws.sent = [];
+
+    await sendMessage(ws, { type: 'move_item', itemId, position: 'XXL' });
+
+    assert.deepEqual(latestError(ws), {
+      type: 'error',
+      code: WEBSOCKET_MESSAGE_ERRORS.ITEM_POSITION_INVALID,
+      message: 'Invalid position for bucket room: XXL',
+    });
+    assert.equal(getRoom(room.id).items[0].position, null);
+  });
+
   it('broadcasts timer state with server time and clears it on reveal', async () => {
     const room = createRoom('planning-poker', null, 'Sprint 42');
     const ws = connect(room.id, 'p1');

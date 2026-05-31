@@ -290,6 +290,8 @@ Current error codes:
 | `item_label_too_long` | The item label exceeds the shared text limit |
 | `item_limit_reached` | The room already contains the maximum number of items |
 | `item_not_found` | The requested item does not exist |
+| `item_position_invalid` | The position is not allowed for this room type |
+| `item_position_room_type_invalid` | Items cannot be moved in this room type |
 | `join_before_moving_items` | The participant must join before moving items |
 | `join_before_voting` | The participant must join before voting |
 | `name_required` | The participant name is missing |
@@ -370,8 +372,9 @@ Behavior:
 - The participant must have joined the room.
 - `itemId` is required.
 - `position` is required and may be `null`.
-- Bucket rooms usually use `null`, `XS`, `S`, `M`, `L`, `XL`.
-- Relative rooms usually use `null`, `1`, `2`, `3`, `5`, `8`, `13`, `21`.
+- Bucket rooms accept only `null`, `XS`, `S`, `M`, `L`, `XL`.
+- Relative rooms accept only `null`, `1`, `2`, `3`, `5`, `8`, `13`, `21`.
+- Planning Poker rooms reject `move_item`.
 
 ### `add_item`
 
