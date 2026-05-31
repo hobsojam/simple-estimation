@@ -331,8 +331,9 @@ Behavior:
 - The participant must have joined the room.
 - `itemId` is required.
 - `position` is required and may be `null`.
-- Bucket rooms usually use `null`, `XS`, `S`, `M`, `L`, `XL`.
-- Relative rooms usually use `null`, `1`, `2`, `3`, `5`, `8`, `13`, `21`.
+- Bucket rooms accept only `null`, `XS`, `S`, `M`, `L`, `XL`.
+- Relative rooms accept only `null`, `1`, `2`, `3`, `5`, `8`, `13`, `21`.
+- Planning Poker rooms reject `move_item`.
 
 ### `add_item`
 

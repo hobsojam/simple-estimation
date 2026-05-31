@@ -840,6 +840,36 @@ describe('handlers', () => {
       await handleMessage(ws, room, { type: 'move_item', itemId: room.items[0].id, position: '13' });
       assert.equal(room.items[0].position, '13');
     });
+
+    it('rejects invalid bucket positions', async () => {
+      const room = createRoom('bucket', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'move_item', itemId: room.items[0].id, position: 'XXL' });
+      assert.equal(ws.messages[0].message, 'Invalid position for bucket room: XXL');
+      assert.equal(room.items[0].position, null);
+    });
+
+    it('rejects invalid relative positions', async () => {
+      const room = createRoom('relative', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'move_item', itemId: room.items[0].id, position: '34' });
+      assert.equal(ws.messages[0].message, 'Invalid position for relative room: 34');
+      assert.equal(room.items[0].position, null);
+    });
+
+    it('rejects moving items in Planning Poker rooms', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('f1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'move_item', itemId: room.items[0].id, position: 'M' });
+      assert.equal(ws.messages[0].message, 'Items cannot be moved in Planning Poker rooms');
+      assert.equal(room.items[0].position, undefined);
+    });
   });
 
   describe('unknown message type', () => {
