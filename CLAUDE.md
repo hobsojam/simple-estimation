@@ -91,12 +91,12 @@ All messages are JSON. Inbound (client → server):
 | `claim_facilitator` | `{ pin }` | Verify with bcryptjs |
 | `vote` | `{ vote }` | Fibonacci: 1 2 3 5 8 13 21 ? ∞ ☕ |
 | `move_item` | `{ itemId, position }` | Bucket name or Fibonacci value |
-| `add_item` | `{ label }` | Facilitator only |
-| `reveal` | — | Facilitator only |
-| `reset` | — | Facilitator only |
-| `select_item` | `{ itemId }` | Planning Poker only; facilitator only. Sets item `active`, clears votes |
-| `finalise_item` | `{ itemId, estimate }` | Planning Poker only; facilitator only. Estimate must be a valid vote value |
-| `remove_item` | `{ itemId }` | Planning Poker only; facilitator only. Only `pending` items can be removed |
+| `add_item` | `{ label }` | Admin action |
+| `reveal` | — | Admin action |
+| `reset` | — | Admin action |
+| `select_item` | `{ itemId }` | Planning Poker only; admin action. Sets item `active`, clears votes |
+| `finalise_item` | `{ itemId, estimate }` | Planning Poker only; admin action. Estimate must be a valid vote value |
+| `remove_item` | `{ itemId }` | Planning Poker only; admin action. Only `pending` items can be removed |
 
 Outbound (server → client):
 
@@ -151,8 +151,8 @@ Static files are served from `./public` in production. The `STATIC_DIR` env var 
 - No external cloud dependencies — all runtime deps must be `npm` packages only
 - Server code never sends `pinHash` to any client under any circumstance
 - Server code never sends `accessPinHash` to any client under any circumstance
-- All inbound WebSocket messages must be validated before acting on them (check required fields, check facilitator permissions)
-- Facilitator-only actions (`reveal`, `reset`, `add_item`) must verify `ws.participantId === room.facilitatorId` server-side — never trust the client
+- All inbound WebSocket messages must be validated before acting on them (check required fields, check admin permissions)
+- Admin actions must follow `docs/api.md`: rooms without a facilitator PIN allow any joined, authorized participant to administer; rooms with a facilitator PIN must verify `ws.participantId === room.facilitatorId` server-side. Never trust client-side claims.
 
 ## Dependency changes
 
