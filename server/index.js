@@ -5,7 +5,7 @@ const { WebSocketServer } = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
-const { WEBSOCKET_ERRORS } = require('../shared/errors.json');
+const { WEBSOCKET_ERRORS, WEBSOCKET_MESSAGE_ERRORS } = require('../shared/errors.json');
 const { createRoom, getRoom, getAllRooms, removeParticipant, deleteRoom, revealVotes, clearTimer } = require('./rooms');
 const { handleMessage } = require('./handlers');
 const { sanitizeRoom } = require('./sanitize');
@@ -59,7 +59,7 @@ const staticFallbackLimiter = rateLimit({
 app.use('/api', apiLimiter);
 
 app.get('/api/config', (req, res) => {
-  res.json({ demoMode: DEMO_MODE });
+  res.json({ demoMode: DEMO_MODE, protocolVersion: 1 });
 });
 
 app.post('/api/rooms', createRoomLimiter, async (req, res) => {
@@ -271,7 +271,7 @@ function handleConnection(ws, req) {
     try {
       data = JSON.parse(raw);
     } catch {
-      ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }));
+      ws.send(JSON.stringify({ type: 'error', code: WEBSOCKET_MESSAGE_ERRORS.INVALID_JSON, message: 'Invalid JSON' }));
       return;
     }
 
@@ -287,7 +287,7 @@ function handleConnection(ws, req) {
 
       if (!ws.isAuthorized && data.type !== 'join') {
         console.log(`[WS] Unauthorized access attempt: ${data.type}`);
-        ws.send(JSON.stringify({ type: 'error', message: 'Access PIN required' }));
+        ws.send(JSON.stringify({ type: 'error', code: WEBSOCKET_MESSAGE_ERRORS.ACCESS_PIN_REQUIRED, message: 'Access PIN required' }));
         return;
       }
 
@@ -306,7 +306,7 @@ function handleConnection(ws, req) {
     }).catch((err) => {
       console.error(`[WS] Unhandled error in message chain (${ws.participantId ?? 'unknown'}):`, err.message);
       if (ws.readyState === ws.OPEN) {
-        ws.send(JSON.stringify({ type: 'error', message: 'Internal server error' }));
+        ws.send(JSON.stringify({ type: 'error', code: WEBSOCKET_MESSAGE_ERRORS.INTERNAL_SERVER_ERROR, message: 'Internal server error' }));
       }
     });
   });

@@ -1,6 +1,7 @@
 const { describe, it, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const bcrypt = require('bcryptjs');
+const { WEBSOCKET_MESSAGE_ERRORS } = require('../../shared/errors.json');
 const { createRoom, clearRooms } = require('../rooms');
 const { handleMessage } = require('../handlers');
 
@@ -153,7 +154,11 @@ describe('handlers', () => {
       const room = createRoom('planning-poker', null);
       const ws = mockWs('p1');
       await handleMessage(ws, room, { type: 'join', name: 'a'.repeat(201) });
-      assert.deepEqual(ws.messages[0], { type: 'error', message: 'Name must be 200 characters or fewer' });
+      assert.deepEqual(ws.messages[0], {
+        type: 'error',
+        code: WEBSOCKET_MESSAGE_ERRORS.NAME_TOO_LONG,
+        message: 'Name must be 200 characters or fewer',
+      });
       assert.equal(room.participants.length, 0);
     });
 

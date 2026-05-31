@@ -3,7 +3,7 @@ const { describe, it, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const request = require('supertest');
 const bcrypt = require('bcryptjs');
-const { WEBSOCKET_ERRORS } = require('../../shared/errors.json');
+const { WEBSOCKET_ERRORS, WEBSOCKET_MESSAGE_ERRORS } = require('../../shared/errors.json');
 const {
   app,
   clearRoomTimer,
@@ -100,8 +100,9 @@ describe('HTTP protocol contract', () => {
     const res = await request(app).get('/api/config');
 
     assert.equal(res.status, 200);
-    assert.deepEqual(Object.keys(res.body).sort(), ['demoMode']);
+    assert.deepEqual(Object.keys(res.body).sort(), ['demoMode', 'protocolVersion']);
     assert.equal(typeof res.body.demoMode, 'boolean');
+    assert.equal(res.body.protocolVersion, 1);
   });
 
   it('GET /api/rooms lists only public room metadata', async () => {
@@ -241,7 +242,11 @@ describe('WebSocket protocol contract', () => {
 
     await sendMessage(ws, { type: 'add_item', label: 'Story A' });
 
-    assert.deepEqual(ws.sent, [{ type: 'error', message: 'Access PIN required' }]);
+    assert.deepEqual(ws.sent, [{
+      type: 'error',
+      code: WEBSOCKET_MESSAGE_ERRORS.ACCESS_PIN_REQUIRED,
+      message: 'Access PIN required',
+    }]);
     assert.deepEqual(getRoom(room.id).items, []);
   });
 
@@ -365,10 +370,18 @@ describe('WebSocket protocol contract', () => {
 
     ws.emit('message', '{not-json');
     await new Promise(resolve => setImmediate(resolve));
-    assert.deepEqual(ws.sent, [{ type: 'error', message: 'Invalid JSON' }]);
+    assert.deepEqual(ws.sent, [{
+      type: 'error',
+      code: WEBSOCKET_MESSAGE_ERRORS.INVALID_JSON,
+      message: 'Invalid JSON',
+    }]);
 
     ws.sent = [];
     await sendMessage(ws, { type: 'teleport' });
-    assert.deepEqual(latestError(ws), { type: 'error', message: 'Unknown message type: teleport' });
+    assert.deepEqual(latestError(ws), {
+      type: 'error',
+      code: WEBSOCKET_MESSAGE_ERRORS.UNKNOWN_MESSAGE_TYPE,
+      message: 'Unknown message type: teleport',
+    });
   });
 });

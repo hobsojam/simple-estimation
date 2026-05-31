@@ -20,5 +20,35 @@
       "code": 4999,
       "description": "Unknown WebSocket error"
     }
+  },
+  "WEBSOCKET_MESSAGE_ERRORS": {
+    "ACCESS_PIN_REQUIRED": "access_pin_required",
+    "ACTIVE_ITEM_REQUIRED": "active_item_required",
+    "ADMIN_REQUIRED": "admin_required",
+    "DONE_ITEM_SELECTION_FORBIDDEN": "done_item_selection_forbidden",
+    "ESTIMATE_REQUIRED": "estimate_required",
+    "INTERNAL_SERVER_ERROR": "internal_server_error",
+    "INVALID_ACCESS_PIN": "invalid_access_pin",
+    "INVALID_ESTIMATE": "invalid_estimate",
+    "INVALID_JSON": "invalid_json",
+    "INVALID_PIN": "invalid_pin",
+    "INVALID_VOTE": "invalid_vote",
+    "ITEM_ID_REQUIRED": "item_id_required",
+    "ITEM_LABEL_REQUIRED": "item_label_required",
+    "ITEM_LABEL_TOO_LONG": "item_label_too_long",
+    "ITEM_LIMIT_REACHED": "item_limit_reached",
+    "ITEM_NOT_FOUND": "item_not_found",
+    "JOIN_BEFORE_MOVING_ITEMS": "join_before_moving_items",
+    "JOIN_BEFORE_VOTING": "join_before_voting",
+    "NAME_REQUIRED": "name_required",
+    "NAME_TOO_LONG": "name_too_long",
+    "PENDING_ITEM_REQUIRED": "pending_item_required",
+    "PIN_REQUIRED": "pin_required",
+    "POSITION_REQUIRED": "position_required",
+    "ROOM_HAS_NO_PIN": "room_has_no_pin",
+    "TIMER_DURATION_INVALID": "timer_duration_invalid",
+    "TIMER_ROOM_TYPE_REQUIRED": "timer_room_type_required",
+    "UNKNOWN_MESSAGE_TYPE": "unknown_message_type",
+    "VOTE_REQUIRED": "vote_required"
   }
 }
