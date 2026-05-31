@@ -1,5 +1,0 @@
-[components.server]
-lcov = "reports/server/lcov.info"
-
-[components.client]
-lcov = "reports/client/lcov.info"
