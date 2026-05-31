@@ -100,8 +100,9 @@ describe('HTTP protocol contract', () => {
     const res = await request(app).get('/api/config');
 
     assert.equal(res.status, 200);
-    assert.deepEqual(Object.keys(res.body).sort(), ['demoMode']);
+    assert.deepEqual(Object.keys(res.body).sort(), ['demoMode', 'protocolVersion']);
     assert.equal(typeof res.body.demoMode, 'boolean');
+    assert.equal(res.body.protocolVersion, 1);
   });
 
   it('GET /api/rooms lists only public room metadata', async () => {

@@ -49,9 +49,13 @@ Response `200`:
 
 ```json
 {
-  "demoMode": false
+  "demoMode": false,
+  "protocolVersion": 1
 }
 ```
+
+`protocolVersion` identifies the public HTTP and WebSocket contract. Native
+clients should reject versions they do not support.
 
 ### POST `/api/rooms`
 
