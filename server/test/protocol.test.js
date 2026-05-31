@@ -10,6 +10,7 @@ const {
   handleConnection,
   roomSockets,
   roomTimers,
+  scheduleAutoReveal,
   wsConnectionCountsByIp,
 } = require('../index');
 const {
@@ -144,6 +145,36 @@ describe('HTTP protocol contract', () => {
     assert.deepEqual(Object.keys(res.body), ['id']);
     assert.equal(typeof res.body.id, 'string');
   });
+
+  it('DELETE /api/rooms/:id removes an unprotected room', async () => {
+    const createRes = await request(app).post('/api/rooms').send({
+      type: 'planning-poker',
+      name: 'Disposable Room',
+    });
+
+    const deleteRes = await request(app).delete(`/api/rooms/${createRes.body.id}`);
+
+    assert.equal(deleteRes.status, 204);
+    assert.equal(getRoom(createRes.body.id), undefined);
+  });
+
+  it('DELETE /api/rooms/:id requires the facilitator PIN for protected rooms', async () => {
+    const createRes = await request(app).post('/api/rooms').send({
+      type: 'planning-poker',
+      name: 'Protected Room',
+      pin: 'admin',
+    });
+
+    const forbidden = await request(app).delete(`/api/rooms/${createRes.body.id}`);
+    const deleted = await request(app)
+      .delete(`/api/rooms/${createRes.body.id}`)
+      .send({ pin: 'admin' });
+
+    assert.equal(forbidden.status, 403);
+    assert.deepEqual(forbidden.body, { error: 'PIN required' });
+    assert.equal(deleted.status, 204);
+    assert.equal(getRoom(createRes.body.id), undefined);
+  });
 });
 
 describe('WebSocket protocol contract', () => {
@@ -232,6 +263,40 @@ describe('WebSocket protocol contract', () => {
     assert.equal(state.accessRequired, undefined);
     assert.deepEqual(state.participants.map(p => p.name), ['Alice', 'Bob']);
     assert.ok(!('accessPinHash' in state));
+  });
+
+  it('preserves participant identity when reconnecting with the same participantId', async () => {
+    const room = createRoom('planning-poker', null, 'Sprint 42');
+    const firstSocket = connect(room.id, 'alice');
+    await sendMessage(firstSocket, { type: 'join', name: 'Alice' });
+    firstSocket.emit('close');
+
+    const reconnect = connect(room.id, 'alice');
+    await sendMessage(reconnect, { type: 'join', name: 'Alice Reconnected' });
+
+    const state = latestState(reconnect);
+    assert.deepEqual(state.participants, [{
+      id: 'alice',
+      name: 'Alice Reconnected',
+      voted: false,
+      vote: null,
+    }]);
+    assert.equal(state.facilitatorId, 'alice');
+  });
+
+  it('transfers facilitator ownership after a valid claim', async () => {
+    const pinHash = await bcrypt.hash('admin', 10);
+    const room = createRoom('planning-poker', pinHash, 'Sprint 42');
+    const alice = connect(room.id, 'alice');
+    const bob = connect(room.id, 'bob');
+
+    await sendMessage(alice, { type: 'join', name: 'Alice', pin: 'admin' });
+    await sendMessage(bob, { type: 'join', name: 'Bob' });
+    bob.sent = [];
+
+    await sendMessage(bob, { type: 'claim_facilitator', pin: 'admin' });
+
+    assert.equal(latestState(bob).facilitatorId, 'bob');
   });
 
   it('rejects messages other than join before access authorization', async () => {
@@ -362,6 +427,48 @@ describe('WebSocket protocol contract', () => {
     assert.equal(state.timer.endsAt, null);
     assert.equal(state.timer.durationSeconds, null);
     assert.equal(typeof state.timer.serverNow, 'number');
+  });
+
+  it('broadcasts cleared timer state after cancellation', async () => {
+    const room = createRoom('planning-poker', null, 'Sprint 42');
+    const ws = connect(room.id, 'p1');
+    await sendMessage(ws, { type: 'join', name: 'Alice' });
+    await sendMessage(ws, { type: 'start_timer', seconds: 30 });
+    ws.sent = [];
+
+    await sendMessage(ws, { type: 'cancel_timer' });
+
+    const state = latestState(ws);
+    assert.equal(state.timer.endsAt, null);
+    assert.equal(state.timer.durationSeconds, null);
+  });
+
+  it('broadcasts revealed state when the timer expires', async () => {
+    const room = createRoom('planning-poker', null, 'Sprint 42');
+    const ws = connect(room.id, 'p1');
+    await sendMessage(ws, { type: 'join', name: 'Alice' });
+    startTimer(room.id, 30);
+    ws.sent = [];
+
+    scheduleAutoReveal(room.id, Date.now() + 10);
+    await new Promise(resolve => setTimeout(resolve, 30));
+
+    const state = latestState(ws);
+    assert.equal(state.revealed, true);
+    assert.equal(state.timer.endsAt, null);
+    assert.equal(state.timer.durationSeconds, null);
+  });
+
+  it('closes active sockets when the room is deleted over HTTP', async () => {
+    const room = createRoom('planning-poker', null, 'Disposable Room');
+    const ws = connect(room.id, 'p1');
+
+    const res = await request(app).delete(`/api/rooms/${room.id}`);
+
+    assert.equal(res.status, 204);
+    assert.deepEqual(ws.closed, [{ code: 1000, reason: 'Room deleted' }]);
+    assert.equal(roomSockets.has(room.id), false);
+    assert.equal(getRoom(room.id), undefined);
   });
 
   it('returns stable error envelopes for malformed JSON and unknown messages', async () => {
