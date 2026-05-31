@@ -18,6 +18,7 @@
     'Invalid access PIN',
     'Connection lost. Please refresh the page.',
   ]);
+  const NAME_STORAGE_KEY = 'simple-estimation.display-name';
 
   let page = 'home';
   let pendingJoin = null;
@@ -25,6 +26,17 @@
   let createError = null;
   let demoMode = false;
   const appVersion = clientPackage.version;
+
+  function getRememberedName() {
+    return sessionStorage.getItem(NAME_STORAGE_KEY) ?? '';
+  }
+
+  function rememberName(name) {
+    const trimmedName = name.trim();
+    sessionStorage.setItem(NAME_STORAGE_KEY, trimmedName);
+    directName = trimmedName;
+    return trimmedName;
+  }
 
   function getUrlParams() {
     const params = new URLSearchParams(window.location.search);
@@ -69,6 +81,7 @@
   });
 
   async function handleCreate({ name, roomType, pin, accessPin, roomName }) {
+    name = rememberName(name);
     createError = null;
     let roomId;
     try {
@@ -99,6 +112,7 @@
   }
 
   function handleJoin({ roomId, name, pin, accessPin }) {
+    name = rememberName(name);
     setUrlParams(roomId, null);
 
     joinSent = false;
@@ -147,12 +161,13 @@
     page = 'room-enter-name';
   }
 
-  let directName = '';
+  let directName = getRememberedName();
   let directPin = '';
   let directAccessPin = '';
 
   function handleDirectJoin() {
     if (!directName.trim()) return;
+    directName = rememberName(directName);
     joinSent = true;
     send({
       type: 'join',
@@ -194,7 +209,7 @@
   {/if}
 
   {#if page === 'home'}
-    <JoinForm oncreate={handleCreate} onjoin={handleJoin} />
+    <JoinForm initialName={getRememberedName()} oncreate={handleCreate} onjoin={handleJoin} />
     {#if createError}
       <div class="create-error" role="alert">{createError}</div>
     {/if}

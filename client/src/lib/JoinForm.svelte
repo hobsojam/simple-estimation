@@ -1,11 +1,12 @@
 <script>
   import { tick } from 'svelte';
 
-  let { oncreate, onjoin } = $props();
+  let { initialName = '', oncreate, onjoin } = $props();
 
   let mode = $state('join');
   let roomId = $state('');
   let name = $state('');
+  let initialNameApplied = $state(false);
   let pin = $state('');
   let accessPin = $state('');
   let roomType = $state('planning-poker');
@@ -13,6 +14,13 @@
 
   let tabJoin = $state(null);
   let tabCreate = $state(null);
+
+  $effect(() => {
+    if (!initialNameApplied) {
+      name = initialName;
+      initialNameApplied = true;
+    }
+  });
 
   function handleCreate() {
     if (!name.trim()) return;

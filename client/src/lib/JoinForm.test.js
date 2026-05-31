@@ -4,6 +4,11 @@ import JoinForm from './JoinForm.svelte';
 
 describe('JoinForm', () => {
   describe('join mode (default)', () => {
+    it('prefills the name when an initial value is provided', () => {
+      const { getByPlaceholderText } = render(JoinForm, { initialName: 'Alice' });
+      expect(getByPlaceholderText('Enter your name')).toHaveValue('Alice');
+    });
+
     it('shows join fields by default', () => {
       const { getByPlaceholderText } = render(JoinForm);
       expect(getByPlaceholderText('Enter your name')).toBeInTheDocument();

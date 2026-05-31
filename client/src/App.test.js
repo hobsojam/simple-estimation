@@ -69,6 +69,7 @@ async function flush() {
 }
 
 beforeEach(() => {
+  sessionStorage.clear();
   roomState.set(null);
   wsError.set(null);
   fatalWsError.set(null);
@@ -145,6 +146,18 @@ describe('App.svelte page state machine', () => {
       pin: 'admin-pin',
     });
     expect(getByRole('button', { name: 'Leave Room' })).toBeInTheDocument();
+  });
+
+  it('prefills the direct-link name prompt from the current browser session', async () => {
+    sessionStorage.setItem('simple-estimation.display-name', 'Alice');
+    window.history.pushState({}, '', '/?room=abc123');
+
+    const { getByPlaceholderText } = render(App);
+    await flush();
+    roomState.set(baseRoom);
+    await flush();
+
+    expect(getByPlaceholderText('Enter your name')).toHaveValue('Alice');
   });
 
   it('runs the join form flow and sends join once room state arrives', async () => {
@@ -316,7 +329,7 @@ describe('App.svelte page state machine', () => {
 
   it('handleLeave disconnects, clears URL params, and returns home', async () => {
     window.history.pushState({}, '', '/?room=abc123');
-    const { getByRole } = render(App);
+    const { getByRole, getByPlaceholderText } = render(App);
     await flush();
     roomState.set(baseRoom);
     await flush();
@@ -331,6 +344,7 @@ describe('App.svelte page state machine', () => {
     expect(disconnect).toHaveBeenCalled();
     expect(window.location.search).toBe('');
     expect(getByRole('tablist')).toBeInTheDocument();
+    expect(getByPlaceholderText('Enter your name')).toHaveValue('Frank');
     expect(connect).toHaveBeenCalledTimes(1);
   });
 });
