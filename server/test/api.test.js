@@ -127,7 +127,7 @@ describe('GET /api/config', () => {
   it('returns demoMode false by default', async () => {
     const res = await request(app).get('/api/config');
     assert.equal(res.status, 200);
-    assert.deepEqual(res.body, { demoMode: false });
+    assert.deepEqual(res.body, { demoMode: false, protocolVersion: 1 });
   });
 });
 

@@ -59,7 +59,7 @@ const staticFallbackLimiter = rateLimit({
 app.use('/api', apiLimiter);
 
 app.get('/api/config', (req, res) => {
-  res.json({ demoMode: DEMO_MODE });
+  res.json({ demoMode: DEMO_MODE, protocolVersion: 1 });
 });
 
 app.post('/api/rooms', createRoomLimiter, async (req, res) => {
