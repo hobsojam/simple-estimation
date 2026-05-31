@@ -38,6 +38,8 @@
     "ITEM_LABEL_TOO_LONG": "item_label_too_long",
     "ITEM_LIMIT_REACHED": "item_limit_reached",
     "ITEM_NOT_FOUND": "item_not_found",
+    "ITEM_POSITION_INVALID": "item_position_invalid",
+    "ITEM_POSITION_ROOM_TYPE_INVALID": "item_position_room_type_invalid",
     "JOIN_BEFORE_MOVING_ITEMS": "join_before_moving_items",
     "JOIN_BEFORE_VOTING": "join_before_voting",
     "NAME_REQUIRED": "name_required",

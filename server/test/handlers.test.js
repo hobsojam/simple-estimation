@@ -852,7 +852,11 @@ describe('handlers', () => {
       await handleMessage(ws, room, { type: 'join', name: 'Alice' });
       await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
       await handleMessage(ws, room, { type: 'move_item', itemId: room.items[0].id, position: 'XXL' });
-      assert.equal(ws.messages[0].message, 'Invalid position for bucket room: XXL');
+      assert.deepEqual(ws.messages[0], {
+        type: 'error',
+        code: WEBSOCKET_MESSAGE_ERRORS.ITEM_POSITION_INVALID,
+        message: 'Invalid position for bucket room: XXL',
+      });
       assert.equal(room.items[0].position, null);
     });
 
@@ -862,7 +866,11 @@ describe('handlers', () => {
       await handleMessage(ws, room, { type: 'join', name: 'Alice' });
       await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
       await handleMessage(ws, room, { type: 'move_item', itemId: room.items[0].id, position: '34' });
-      assert.equal(ws.messages[0].message, 'Invalid position for relative room: 34');
+      assert.deepEqual(ws.messages[0], {
+        type: 'error',
+        code: WEBSOCKET_MESSAGE_ERRORS.ITEM_POSITION_INVALID,
+        message: 'Invalid position for relative room: 34',
+      });
       assert.equal(room.items[0].position, null);
     });
 
@@ -872,7 +880,11 @@ describe('handlers', () => {
       await handleMessage(ws, room, { type: 'join', name: 'Alice' });
       await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
       await handleMessage(ws, room, { type: 'move_item', itemId: room.items[0].id, position: 'M' });
-      assert.equal(ws.messages[0].message, 'Items cannot be moved in Planning Poker rooms');
+      assert.deepEqual(ws.messages[0], {
+        type: 'error',
+        code: WEBSOCKET_MESSAGE_ERRORS.ITEM_POSITION_ROOM_TYPE_INVALID,
+        message: 'Items cannot be moved in Planning Poker rooms',
+      });
       assert.equal(room.items[0].position, undefined);
     });
   });

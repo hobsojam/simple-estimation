@@ -333,6 +333,7 @@ describe('WebSocket protocol contract', () => {
 
     assert.deepEqual(latestError(ws), {
       type: 'error',
+      code: WEBSOCKET_MESSAGE_ERRORS.ITEM_POSITION_INVALID,
       message: 'Invalid position for bucket room: XXL',
     });
     assert.equal(getRoom(room.id).items[0].position, null);

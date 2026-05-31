@@ -189,8 +189,8 @@ function handleMoveItem(ws, room, data) {
   if (!data.itemId) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_ID_REQUIRED, 'itemId required');
   if (data.position === undefined) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.POSITION_REQUIRED, 'position required');
   const validPositions = VALID_ITEM_POSITIONS[room.type];
-  if (!validPositions) return sendError(ws, 'Items cannot be moved in Planning Poker rooms');
-  if (!validPositions.has(data.position)) return sendError(ws, `Invalid position for ${room.type} room: ${data.position}`);
+  if (!validPositions) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_POSITION_ROOM_TYPE_INVALID, 'Items cannot be moved in Planning Poker rooms');
+  if (!validPositions.has(data.position)) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_POSITION_INVALID, `Invalid position for ${room.type} room: ${data.position}`);
 
   moveItem(room.id, data.itemId, data.position);
   return true;
