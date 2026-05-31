@@ -18,6 +18,8 @@ This instance is for demonstration only. We make no promise that it will be avai
 
 ## Features
 
+- Responsive layouts and touch-friendly controls for desktop, tablet, and phone browsers
+
 ### Planning Poker
 - Facilitator creates a room (with an optional name) and shares a link
 - Participants join with a display name
@@ -32,11 +34,11 @@ This instance is for demonstration only. We make no promise that it will be avai
 
 ### Magic Estimation — Bucket Mode
 - Admins create a set of items (user stories, tasks)
-- Participants collaboratively drag items into size buckets (XS, S, M, L, XL)
+- Participants collaboratively drag items or use touch-friendly move controls to place them into size buckets (XS, S, M, L, XL)
 - All moves are visible in real time
 
 ### Magic Estimation — Relative Line Mode
-- Items are placed on a horizontal Fibonacci scale
+- Items are placed on a horizontal Fibonacci scale using drag-and-drop or touch-friendly move controls
 - Participants move items relative to each other to establish sizing
 - Outlier positions trigger discussion
 
