@@ -261,12 +261,47 @@ Sent when a WebSocket message is invalid or not allowed.
 ```json
 {
   "type": "error",
+  "code": "admin_required",
   "message": "Only the facilitator can reveal votes"
 }
 ```
 
-Error messages are human-readable strings and are not currently versioned error
-codes.
+`code` is a stable machine-readable string for client logic. `message` is
+human-readable display text and may include context such as an invalid value.
+Clients should branch on `code`, not `message`.
+
+Current error codes:
+
+| Code | Meaning |
+|---|---|
+| `access_pin_required` | The access PIN must be supplied before continuing |
+| `active_item_required` | Only the active item can be finalized |
+| `admin_required` | The socket does not have permission for an admin action |
+| `done_item_selection_forbidden` | A completed item cannot become active |
+| `estimate_required` | The estimate field is missing |
+| `internal_server_error` | The server failed while processing a message |
+| `invalid_access_pin` | The supplied access PIN is incorrect |
+| `invalid_estimate` | The estimate is not an allowed vote value |
+| `invalid_json` | The WebSocket message is not valid JSON |
+| `invalid_pin` | The supplied facilitator PIN is incorrect |
+| `invalid_vote` | The vote is not an allowed vote value |
+| `item_id_required` | The item ID is missing |
+| `item_label_required` | The item label is missing |
+| `item_label_too_long` | The item label exceeds the shared text limit |
+| `item_limit_reached` | The room already contains the maximum number of items |
+| `item_not_found` | The requested item does not exist |
+| `join_before_moving_items` | The participant must join before moving items |
+| `join_before_voting` | The participant must join before voting |
+| `name_required` | The participant name is missing |
+| `name_too_long` | The participant name exceeds the shared text limit |
+| `pending_item_required` | Only pending items can be removed |
+| `pin_required` | A facilitator PIN is required |
+| `position_required` | The item position field is missing |
+| `room_has_no_pin` | The room does not have a facilitator PIN |
+| `timer_duration_invalid` | The timer duration is outside the allowed range |
+| `timer_room_type_required` | Timers are only available in Planning Poker |
+| `unknown_message_type` | The inbound message type is not recognized |
+| `vote_required` | The vote field is missing |
 
 ## Inbound Messages
 

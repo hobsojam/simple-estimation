@@ -1,7 +1,7 @@
 const { EventEmitter } = require('node:events');
 const { describe, it, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
-const { WEBSOCKET_ERRORS } = require('../../shared/errors.json');
+const { WEBSOCKET_ERRORS, WEBSOCKET_MESSAGE_ERRORS } = require('../../shared/errors.json');
 const {
   broadcastState,
   clearRoomTimer,
@@ -259,7 +259,11 @@ describe('handleConnection', () => {
     sender.emit('message', JSON.stringify({ type: 'teleport' }));
     await flushMessageChain();
 
-    assert.deepEqual(sender.sent, [{ type: 'error', message: 'Unknown message type: teleport' }]);
+    assert.deepEqual(sender.sent, [{
+      type: 'error',
+      code: WEBSOCKET_MESSAGE_ERRORS.UNKNOWN_MESSAGE_TYPE,
+      message: 'Unknown message type: teleport',
+    }]);
     assert.equal(observer.sent.length, 0);
   });
 
