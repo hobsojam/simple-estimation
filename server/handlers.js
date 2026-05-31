@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const { WEBSOCKET_MESSAGE_ERRORS } = require('../shared/errors.json');
 const { validateShortText } = require('./validate');
 const {
   upsertParticipant,
@@ -24,14 +25,14 @@ function send(ws, payload) {
   }
 }
 
-function sendError(ws, message) {
-  send(ws, { type: 'error', message });
+function sendError(ws, code, message) {
+  send(ws, { type: 'error', code, message });
   return false;
 }
 
 function isAdmin(ws, room, message) {
   if (room.pinHash !== null && room.facilitatorId !== ws.participantId) {
-    sendError(ws, message);
+    sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ADMIN_REQUIRED, message);
     return false;
   }
   return true;
@@ -41,15 +42,15 @@ function findItem(room, itemId) {
   return room.items.find(i => i.id === itemId);
 }
 
-function parseVoteValue(ws, value, requiredMessage, invalidPrefix) {
+function parseVoteValue(ws, value, requiredCode, requiredMessage, invalidCode, invalidPrefix) {
   if (value === undefined || value === null) {
-    sendError(ws, requiredMessage);
+    sendError(ws, requiredCode, requiredMessage);
     return null;
   }
 
   const voteStr = String(value);
   if (!VALID_VOTES.has(voteStr)) {
-    sendError(ws, `${invalidPrefix}: ${voteStr}`);
+    sendError(ws, invalidCode, `${invalidPrefix}: ${voteStr}`);
     return null;
   }
 
@@ -59,16 +60,16 @@ function parseVoteValue(ws, value, requiredMessage, invalidPrefix) {
 function validateItemLabel(ws, room, label) {
   const result = validateShortText(label);
   if (!result.ok && result.reason === 'required') {
-    sendError(ws, 'Item label required');
+    sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_LABEL_REQUIRED, 'Item label required');
     return null;
   }
   if (!result.ok) {
-    sendError(ws, 'Item label must be 200 characters or fewer');
+    sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_LABEL_TOO_LONG, 'Item label must be 200 characters or fewer');
     return null;
   }
 
   if (room.items.length >= 200) {
-    sendError(ws, 'Room has reached the maximum number of items');
+    sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_LIMIT_REACHED, 'Room has reached the maximum number of items');
     return null;
   }
 
@@ -91,7 +92,7 @@ async function ensureAccess(ws, room, data) {
   if (!data.accessPin) {
     // Stryker disable next-line StringLiteral
     console.log(`[WS] Join failed: access PIN required`);
-    sendError(ws, 'Access PIN required');
+    sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ACCESS_PIN_REQUIRED, 'Access PIN required');
     return false;
   }
 
@@ -99,7 +100,7 @@ async function ensureAccess(ws, room, data) {
   if (!valid) {
     // Stryker disable next-line StringLiteral
     console.log(`[WS] Join failed: invalid access PIN`);
-    sendError(ws, 'Invalid access PIN');
+    sendError(ws, WEBSOCKET_MESSAGE_ERRORS.INVALID_ACCESS_PIN, 'Invalid access PIN');
     return false;
   }
 
@@ -116,7 +117,7 @@ async function verifyInitialFacilitatorPin(ws, room, data, noFacilitator, pinReq
 
   const valid = await bcrypt.compare(String(data.pin), room.pinHash);
   if (!valid) {
-    sendError(ws, 'Invalid PIN');
+    sendError(ws, WEBSOCKET_MESSAGE_ERRORS.INVALID_PIN, 'Invalid PIN');
     return null;
   }
 
@@ -128,12 +129,12 @@ async function handleJoin(ws, room, data) {
   if (!participantName.ok && participantName.reason === 'required') {
     // Stryker disable next-line StringLiteral
     console.log(`[WS] Join failed: name missing or invalid`);
-    return sendError(ws, 'Name is required');
+    return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.NAME_REQUIRED, 'Name is required');
   }
   if (!participantName.ok) {
     // Stryker disable next-line StringLiteral
     console.log(`[WS] Join failed: name too long`);
-    return sendError(ws, 'Name must be 200 characters or fewer');
+    return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.NAME_TOO_LONG, 'Name must be 200 characters or fewer');
   }
 
   if (!(await ensureAccess(ws, room, data))) return false;
@@ -155,11 +156,11 @@ async function handleJoin(ws, room, data) {
 }
 
 async function handleClaimFacilitator(ws, room, data) {
-  if (!data.pin) return sendError(ws, 'PIN required');
-  if (!room.pinHash) return sendError(ws, 'This room has no PIN');
+  if (!data.pin) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.PIN_REQUIRED, 'PIN required');
+  if (!room.pinHash) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ROOM_HAS_NO_PIN, 'This room has no PIN');
 
   const valid = await bcrypt.compare(String(data.pin), room.pinHash);
-  if (!valid) return sendError(ws, 'Invalid PIN');
+  if (!valid) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.INVALID_PIN, 'Invalid PIN');
 
   setFacilitator(room.id, ws.participantId);
   return true;
@@ -167,10 +168,10 @@ async function handleClaimFacilitator(ws, room, data) {
 
 function handleVote(ws, room, data) {
   if (!room.participants.some(p => p.id === ws.participantId)) {
-    return sendError(ws, 'Join before voting');
+    return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.JOIN_BEFORE_VOTING, 'Join before voting');
   }
 
-  const voteStr = parseVoteValue(ws, data.vote, 'Vote value required', 'Invalid vote value');
+  const voteStr = parseVoteValue(ws, data.vote, WEBSOCKET_MESSAGE_ERRORS.VOTE_REQUIRED, 'Vote value required', WEBSOCKET_MESSAGE_ERRORS.INVALID_VOTE, 'Invalid vote value');
   if (voteStr === null) return false;
 
   castVote(room.id, ws.participantId, voteStr);
@@ -179,10 +180,10 @@ function handleVote(ws, room, data) {
 
 function handleMoveItem(ws, room, data) {
   if (!room.participants.some(p => p.id === ws.participantId)) {
-    return sendError(ws, 'Join before moving items');
+    return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.JOIN_BEFORE_MOVING_ITEMS, 'Join before moving items');
   }
-  if (!data.itemId) return sendError(ws, 'itemId required');
-  if (data.position === undefined) return sendError(ws, 'position required');
+  if (!data.itemId) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_ID_REQUIRED, 'itemId required');
+  if (data.position === undefined) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.POSITION_REQUIRED, 'position required');
 
   moveItem(room.id, data.itemId, data.position);
   return true;
@@ -200,11 +201,11 @@ function handleAddItem(ws, room, data) {
 
 function handleSelectItem(ws, room, data) {
   if (!isAdmin(ws, room, 'Only the facilitator can select items')) return false;
-  if (!data.itemId) return sendError(ws, 'itemId required');
+  if (!data.itemId) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_ID_REQUIRED, 'itemId required');
 
   const item = findItem(room, data.itemId);
-  if (!item) return sendError(ws, 'Item not found');
-  if (item.status === 'done') return sendError(ws, 'Cannot select a done item');
+  if (!item) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_NOT_FOUND, 'Item not found');
+  if (item.status === 'done') return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.DONE_ITEM_SELECTION_FORBIDDEN, 'Cannot select a done item');
 
   selectItem(room.id, data.itemId);
   return true;
@@ -212,14 +213,14 @@ function handleSelectItem(ws, room, data) {
 
 function handleFinaliseItem(ws, room, data) {
   if (!isAdmin(ws, room, 'Only the facilitator can finalise items')) return false;
-  if (!data.itemId) return sendError(ws, 'itemId required');
+  if (!data.itemId) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_ID_REQUIRED, 'itemId required');
 
-  const estimateStr = parseVoteValue(ws, data.estimate, 'estimate required', 'Invalid estimate value');
+  const estimateStr = parseVoteValue(ws, data.estimate, WEBSOCKET_MESSAGE_ERRORS.ESTIMATE_REQUIRED, 'estimate required', WEBSOCKET_MESSAGE_ERRORS.INVALID_ESTIMATE, 'Invalid estimate value');
   if (estimateStr === null) return false;
 
   const item = findItem(room, data.itemId);
-  if (!item) return sendError(ws, 'Item not found');
-  if (item.status !== 'active') return sendError(ws, 'Only the active item can be finalised');
+  if (!item) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_NOT_FOUND, 'Item not found');
+  if (item.status !== 'active') return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ACTIVE_ITEM_REQUIRED, 'Only the active item can be finalised');
 
   finaliseItem(room.id, data.itemId, estimateStr);
   return true;
@@ -227,11 +228,11 @@ function handleFinaliseItem(ws, room, data) {
 
 function handleRemoveItem(ws, room, data) {
   if (!isAdmin(ws, room, 'Only the facilitator can remove items')) return false;
-  if (!data.itemId) return sendError(ws, 'itemId required');
+  if (!data.itemId) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_ID_REQUIRED, 'itemId required');
 
   const item = findItem(room, data.itemId);
-  if (!item) return sendError(ws, 'Item not found');
-  if (item.status !== 'pending') return sendError(ws, 'Only pending items can be removed');
+  if (!item) return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_NOT_FOUND, 'Item not found');
+  if (item.status !== 'pending') return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.PENDING_ITEM_REQUIRED, 'Only pending items can be removed');
 
   removeItem(room.id, data.itemId);
   return true;
@@ -254,11 +255,11 @@ function handleReset(ws, room) {
 
 function handleStartTimer(ws, room, data) {
   if (!isAdmin(ws, room, 'Only the facilitator can start the timer')) return false;
-  if (room.type !== 'planning-poker') return sendError(ws, 'Timer is only available in Planning Poker rooms');
+  if (room.type !== 'planning-poker') return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.TIMER_ROOM_TYPE_REQUIRED, 'Timer is only available in Planning Poker rooms');
 
   const seconds = Number(data.seconds);
   if (!Number.isInteger(seconds) || seconds < 5 || seconds > 300) {
-    return sendError(ws, 'Timer duration must be between 5 and 300 seconds');
+    return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.TIMER_DURATION_INVALID, 'Timer duration must be between 5 and 300 seconds');
   }
 
   startTimer(room.id, seconds);
@@ -300,7 +301,7 @@ async function handleMessage(ws, room, data) {
       return handleCancelTimer(ws, room);
 
     default:
-      return sendError(ws, `Unknown message type: ${data.type}`);
+      return sendError(ws, WEBSOCKET_MESSAGE_ERRORS.UNKNOWN_MESSAGE_TYPE, `Unknown message type: ${data.type}`);
   }
 }
 
