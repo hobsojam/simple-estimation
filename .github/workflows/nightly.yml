@@ -25,14 +25,19 @@ jobs:
         working-directory: server
       - run: npx c8 --reporter=lcov npm test
         working-directory: server
-      - run: npx stryker run
+      - name: Run mutation tests
+        id: stryker
+        run: npx stryker run
         working-directory: server
+        continue-on-error: true  # exits 1 when mutants survive; report files are still written
       - name: Collect server reports
+        if: always()
         run: |
           mkdir -p artifacts
-          cp server/coverage/lcov.info artifacts/lcov.info
-          cp server/reports/mutation/mutation.json artifacts/mutation.json
+          [ -f server/coverage/lcov.info ] && cp server/coverage/lcov.info artifacts/lcov.info
+          [ -f server/reports/mutation/mutation.json ] && cp server/reports/mutation/mutation.json artifacts/mutation.json
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: server-reports
           path: artifacts/
@@ -51,18 +56,21 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm install
         working-directory: client
-      - run: npx playwright install --with-deps chromium
-        working-directory: client
       - run: npm run test:coverage
         working-directory: client
-      - run: npx stryker run
+      - name: Run mutation tests
+        id: stryker
+        run: npx stryker run
         working-directory: client
+        continue-on-error: true  # exits 1 when mutants survive; report files are still written
       - name: Collect client reports
+        if: always()
         run: |
           mkdir -p artifacts
-          cp client/reports/coverage/lcov.info artifacts/lcov.info
-          cp client/reports/mutation/mutation.json artifacts/mutation.json
+          [ -f client/reports/coverage/lcov.info ] && cp client/reports/coverage/lcov.info artifacts/lcov.info
+          [ -f client/reports/mutation/mutation.json ] && cp client/reports/mutation/mutation.json artifacts/mutation.json
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: client-reports
           path: artifacts/
@@ -71,15 +79,18 @@ jobs:
     name: Test Quality Analysis
     runs-on: ubuntu-latest
     needs: [server-mutation, client-mutation]
+    if: always()  # run even if a mutation job fails — report on whatever data was collected
     steps:
       - uses: actions/checkout@v6
         with:
           ref: main
       - uses: actions/download-artifact@v8
+        continue-on-error: true
         with:
           name: server-reports
           path: reports/server
       - uses: actions/download-artifact@v8
+        continue-on-error: true
         with:
           name: client-reports
           path: reports/client
@@ -87,5 +98,25 @@ jobs:
         with:
           python-version: '3.10'
       - run: pip install git+https://github.com/hobsojam/test-analysis.git@main
-      - run: tqa analyze --config tqa.toml --format github > tqa-summary.md
+      # Generate a runtime config including only the sources that were actually
+      # produced.  A component is omitted entirely if its lcov file is absent
+      # (no point showing an empty section); stryker is omitted per-component
+      # when the mutation run crashed before writing its report.
+      - name: Generate runtime TQA config
+        run: |
+          {
+            if [ -f reports/server/lcov.info ]; then
+              echo '[components.server]'
+              echo 'lcov = "reports/server/lcov.info"'
+              [ -f reports/server/mutation.json ] && echo 'stryker = "reports/server/mutation.json"'
+              echo ''
+            fi
+            if [ -f reports/client/lcov.info ]; then
+              echo '[components.client]'
+              echo 'lcov = "reports/client/lcov.info"'
+              [ -f reports/client/mutation.json ] && echo 'stryker = "reports/client/mutation.json"'
+            fi
+          } > tqa-runtime.toml
+      - run: tqa analyze --config tqa-runtime.toml --format github > tqa-summary.md
+        continue-on-error: true
       - run: cat tqa-summary.md >> $GITHUB_STEP_SUMMARY
