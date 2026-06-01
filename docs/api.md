@@ -536,3 +536,80 @@ Cancels a Planning Poker timer. This is an admin action.
 - Handle WebSocket close codes separately from in-band `error` messages.
 - Preserve unknown fields in local models where practical. Check
   `GET /api/config` and reject protocol versions the client does not support.
+
+## Protocol Compatibility
+
+`protocolVersion` in `GET /api/config` is an integer that increments on every
+breaking change. Native clients must check this value at startup and refuse to
+connect if they do not support the reported version.
+
+### What constitutes a breaking change (version bump)
+
+- Removing or renaming a field in any outbound message or HTTP response body.
+- Changing the type or allowed values of an existing field.
+- Removing or renaming an inbound message `type`.
+- Changing the semantics of an existing inbound message in a way that alters
+  observable server behavior.
+- Adding a new required field to any inbound message.
+
+### What does NOT require a version bump
+
+- Adding new optional fields to outbound messages or HTTP responses. Clients
+  must silently ignore unknown fields.
+- Adding new optional fields to inbound messages (server treats them as no-ops
+  if unrecognized).
+- Adding new inbound message types. Clients on older versions that never send
+  the new type are unaffected.
+- Adding new error codes. Clients should treat unrecognized `code` values as
+  generic errors and display `message` to the user.
+
+### Deprecation policy
+
+When a breaking change is unavoidable, the old behavior will be preserved for
+at least one `protocolVersion` cycle before removal where technically feasible.
+Deprecations will be noted in the [Protocol Changelog](#protocol-changelog).
+
+## Reconnection Behavior
+
+The server holds participant state for the lifetime of the room. Participant
+votes, names, and facilitator ownership are all keyed on `participantId`, not
+on the WebSocket connection. This means:
+
+- A participant that disconnects and reconnects with the same `participantId`
+  (via the `?participantId=` query parameter) resumes as the same logical
+  participant. Their vote is preserved. If they were the facilitator, they
+  regain facilitator status.
+- A participant that reconnects without a `participantId` (or with a different
+  one) is treated as a new, unknown participant.
+
+### Recommended reconnect strategy for native clients
+
+1. On any unexpected close (network loss, process kill, background eviction),
+   attempt to reconnect using exponential backoff: start at 1 second, double
+   on each failure, cap at 30 seconds.
+2. Always include the persisted `participantId` in the reconnect URL.
+3. After a successful reconnect, send `join` again with the same name (and
+   `accessPin` if the room requires it). The server will update the
+   participant's name if it changed and broadcast a fresh `state`.
+4. Treat the `state` message received after reconnect as fully authoritative —
+   do not attempt to replay any actions from the disconnected period.
+5. On close code `4003` (room not found), do not reconnect — the room no longer
+   exists and should be removed from local history.
+
+### Participant identity persistence
+
+- Generate a random UUID `participantId` the first time a user joins a
+  specific room on a specific device.
+- Persist it scoped to that room (e.g. keyed by `roomId` in local storage or a
+  database).
+- Do not share `participantId` values across rooms or devices — they are
+  per-room, per-device identifiers.
+- Clearing app data or reinstalling produces a new `participantId`. The user
+  will rejoin as a fresh participant and will need to re-claim facilitator
+  ownership via `claim_facilitator` if the room has a PIN.
+
+## Protocol Changelog
+
+| Version | Change |
+|---|---|
+| 1 | Initial public protocol. |
