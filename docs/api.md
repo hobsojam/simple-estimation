@@ -608,6 +608,116 @@ on the WebSocket connection. This means:
   will rejoin as a fresh participant and will need to re-claim facilitator
   ownership via `claim_facilitator` if the room has a PIN.
 
+## Deployment and Connectivity
+
+### Production URL requirements
+
+Production clients must use:
+
+- `https://` for all HTTP endpoints
+- `wss://` for the WebSocket connection
+
+The server sets `Strict-Transport-Security` automatically when it detects an
+HTTPS request (via `X-Forwarded-Proto: https` from a reverse proxy, or a
+direct TLS connection).
+
+Plain `http://` and `ws://` must not be used in production builds. Android
+blocks cleartext traffic by default since API 28; see [Android cleartext
+policy](#android-cleartext-policy) below.
+
+### Reverse proxy configuration
+
+The server listens on a single port (default `3000`) for both HTTP and
+WebSocket traffic. When placing it behind a reverse proxy, the proxy must
+forward the WebSocket upgrade headers.
+
+**nginx**
+
+```nginx
+location / {
+    proxy_pass http://localhost:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+**Caddy**
+
+```caddyfile
+example.com {
+    reverse_proxy localhost:3000
+}
+```
+
+Caddy handles WebSocket upgrade forwarding automatically.
+
+After adding a reverse proxy, set `TRUST_PROXY=true` so the server reads the
+real client IP from `X-Forwarded-For` for rate limiting. Do not set this if
+the server is directly internet-facing.
+
+### Environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PORT` | `3000` | HTTP + WebSocket listen port |
+| `STATIC_DIR` | `./public` | Directory to serve the compiled web client from |
+| `TRUST_PROXY` | `false` | Read real client IP from `X-Forwarded-For` (set to `true` behind a reverse proxy) |
+| `DEMO_MODE` | `false` | Returned in `GET /api/config`; clients may use it to hide room management UI |
+| `WS_CONNECTION_LIMIT_PER_IP` | `10` | Maximum simultaneous WebSocket connections per IP address |
+| `API_RATE_LIMIT_MAX` | `100` | Maximum HTTP API requests per IP per 15 minutes |
+| `ROOM_RATE_LIMIT_MAX` | `20` | Maximum rooms created per IP per hour |
+| `ROOM_TTL_DAYS` | `7` | Days of inactivity before a room is swept and deleted |
+
+### Local development for Android
+
+The Android emulator (AVD) does not share the host machine's loopback
+interface. Use the following addresses instead of `localhost`:
+
+| Target | Address |
+|---|---|
+| Android emulator (AVD) | `10.0.2.2` |
+| Physical device (USB/Wi-Fi) | Host machine's LAN IP address |
+
+Example local dev URLs from an AVD:
+
+```
+http://10.0.2.2:3000
+ws://10.0.2.2:3000/ws
+```
+
+### Android cleartext policy
+
+Android blocks cleartext HTTP and WebSocket traffic by default (API 28+).
+For local development against a non-TLS server, enable cleartext in debug
+builds only via a network security configuration file.
+
+`res/xml/network_security_config.xml`:
+
+```xml
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <debug-overrides>
+        <base-config cleartextTrafficPermitted="true" />
+    </debug-overrides>
+</network-security-config>
+```
+
+Reference it in `AndroidManifest.xml`:
+
+```xml
+<application
+    android:networkSecurityConfig="@xml/network_security_config"
+    ...>
+```
+
+This permits `ws://` and `http://` in debug builds while enforcing `wss://`
+and `https://` in release builds. Never set `cleartextTrafficPermitted="true"`
+in the `<base-config>` outside of `<debug-overrides>`.
+
 ## Protocol Changelog
 
 | Version | Change |
