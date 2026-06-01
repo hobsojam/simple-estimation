@@ -284,6 +284,40 @@ describe('WebSocket protocol contract', () => {
     assert.equal(state.facilitatorId, 'alice');
   });
 
+  it('clears vote when a participant disconnects and reconnects', async () => {
+    const room = createRoom('planning-poker', null, 'Sprint 42');
+    const firstSocket = connect(room.id, 'alice');
+    await sendMessage(firstSocket, { type: 'join', name: 'Alice' });
+    await sendMessage(firstSocket, { type: 'vote', vote: '5' });
+    assert.equal(latestState(firstSocket).participants[0].voted, true);
+
+    firstSocket.emit('close');
+
+    const reconnect = connect(room.id, 'alice');
+    await sendMessage(reconnect, { type: 'join', name: 'Alice' });
+
+    const state = latestState(reconnect);
+    assert.equal(state.participants[0].voted, false);
+    assert.equal(state.participants[0].vote, null);
+  });
+
+  it('clears facilitator on disconnect in a PIN-protected room; reclaim requires claim_facilitator', async () => {
+    const pinHash = await bcrypt.hash('admin', 10);
+    const room = createRoom('planning-poker', pinHash, 'Sprint 42');
+    const firstSocket = connect(room.id, 'alice');
+    await sendMessage(firstSocket, { type: 'join', name: 'Alice', pin: 'admin' });
+    assert.equal(latestState(firstSocket).facilitatorId, 'alice');
+
+    firstSocket.emit('close');
+
+    const reconnect = connect(room.id, 'alice');
+    await sendMessage(reconnect, { type: 'join', name: 'Alice' });
+    assert.equal(latestState(reconnect).facilitatorId, null);
+
+    await sendMessage(reconnect, { type: 'claim_facilitator', pin: 'admin' });
+    assert.equal(latestState(reconnect).facilitatorId, 'alice');
+  });
+
   it('transfers facilitator ownership after a valid claim', async () => {
     const pinHash = await bcrypt.hash('admin', 10);
     const room = createRoom('planning-poker', pinHash, 'Sprint 42');
