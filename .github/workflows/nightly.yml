@@ -34,8 +34,8 @@ jobs:
         if: always()
         run: |
           mkdir -p artifacts
-          [ -f server/coverage/lcov.info ] && cp server/coverage/lcov.info artifacts/lcov.info
-          [ -f server/reports/mutation/mutation.json ] && cp server/reports/mutation/mutation.json artifacts/mutation.json
+          if [ -f server/coverage/lcov.info ]; then cp server/coverage/lcov.info artifacts/lcov.info; fi
+          if [ -f server/reports/mutation/mutation.json ]; then cp server/reports/mutation/mutation.json artifacts/mutation.json; fi
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -56,6 +56,8 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm install
         working-directory: client
+      - run: npx playwright install --with-deps chromium
+        working-directory: client
       - run: npm run test:coverage
         working-directory: client
       - name: Run mutation tests
@@ -67,8 +69,8 @@ jobs:
         if: always()
         run: |
           mkdir -p artifacts
-          [ -f client/reports/coverage/lcov.info ] && cp client/reports/coverage/lcov.info artifacts/lcov.info
-          [ -f client/reports/mutation/mutation.json ] && cp client/reports/mutation/mutation.json artifacts/mutation.json
+          if [ -f client/reports/coverage/lcov.info ]; then cp client/reports/coverage/lcov.info artifacts/lcov.info; fi
+          if [ -f client/reports/mutation/mutation.json ]; then cp client/reports/mutation/mutation.json artifacts/mutation.json; fi
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -108,13 +110,13 @@ jobs:
             if [ -f reports/server/lcov.info ]; then
               echo '[components.server]'
               echo 'lcov = "reports/server/lcov.info"'
-              [ -f reports/server/mutation.json ] && echo 'stryker = "reports/server/mutation.json"'
+              if [ -f reports/server/mutation.json ]; then echo 'stryker = "reports/server/mutation.json"'; fi
               echo ''
             fi
             if [ -f reports/client/lcov.info ]; then
               echo '[components.client]'
               echo 'lcov = "reports/client/lcov.info"'
-              [ -f reports/client/mutation.json ] && echo 'stryker = "reports/client/mutation.json"'
+              if [ -f reports/client/mutation.json ]; then echo 'stryker = "reports/client/mutation.json"'; fi
             fi
           } > tqa-runtime.toml
       - run: tqa analyze --config tqa-runtime.toml --format github > tqa-summary.md
