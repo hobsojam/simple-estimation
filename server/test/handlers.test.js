@@ -17,6 +17,10 @@ function mockWs(participantId) {
   return ws;
 }
 
+function assertError(ws, code, message) {
+  assert.deepEqual(ws.messages, [{ type: 'error', code, message }]);
+}
+
 describe('handlers', () => {
   beforeEach(() => clearRooms());
 
@@ -895,6 +899,177 @@ describe('handlers', () => {
       const ws = mockWs('p1');
       await handleMessage(ws, room, { type: 'teleport' });
       assert.equal(ws.messages[0].type, 'error');
+    });
+  });
+
+  describe('mutation-sensitive protocol behavior', () => {
+    it('does not send errors to a socket that is no longer open', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      ws.readyState = 3;
+
+      const result = await handleMessage(ws, room, { type: 'teleport' });
+
+      assert.equal(result, false);
+      assert.deepEqual(ws.messages, []);
+    });
+
+    it('returns false with the exact envelope when a vote is missing', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      ws.messages.length = 0;
+
+      const result = await handleMessage(ws, room, { type: 'vote' });
+
+      assert.equal(result, false);
+      assertError(ws, WEBSOCKET_MESSAGE_ERRORS.VOTE_REQUIRED, 'Vote value required');
+      assert.equal(room.participants[0].vote, null);
+    });
+
+    it('returns false with the exact envelope when an item label is missing', async () => {
+      const room = createRoom('bucket', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      ws.messages.length = 0;
+
+      const result = await handleMessage(ws, room, { type: 'add_item' });
+
+      assert.equal(result, false);
+      assertError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_LABEL_REQUIRED, 'Item label required');
+      assert.deepEqual(room.items, []);
+    });
+
+    it('returns false with the exact envelope when moving before joining', async () => {
+      const room = createRoom('bucket', null);
+      const ws = mockWs('p1');
+
+      const result = await handleMessage(ws, room, { type: 'move_item', itemId: 'i1', position: 'M' });
+
+      assert.equal(result, false);
+      assertError(ws, WEBSOCKET_MESSAGE_ERRORS.JOIN_BEFORE_MOVING_ITEMS, 'Join before moving items');
+      assert.deepEqual(room.items, []);
+    });
+
+    it('returns false with the exact envelope when a move position is missing', async () => {
+      const room = createRoom('bucket', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      ws.messages.length = 0;
+
+      const result = await handleMessage(ws, room, { type: 'move_item', itemId: room.items[0].id });
+
+      assert.equal(result, false);
+      assertError(ws, WEBSOCKET_MESSAGE_ERRORS.POSITION_REQUIRED, 'position required');
+      assert.equal(room.items[0].position, null);
+    });
+
+    it('returns false with the exact envelope when selecting an unknown item', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      ws.messages.length = 0;
+
+      const result = await handleMessage(ws, room, { type: 'select_item', itemId: 'missing' });
+
+      assert.equal(result, false);
+      assertError(ws, WEBSOCKET_MESSAGE_ERRORS.ITEM_NOT_FOUND, 'Item not found');
+      assert.deepEqual(room.items, []);
+    });
+
+    it('returns false with the exact envelope when finalising a pending item', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      ws.messages.length = 0;
+
+      const result = await handleMessage(ws, room, { type: 'finalise_item', itemId: room.items[0].id, estimate: '5' });
+
+      assert.equal(result, false);
+      assertError(ws, WEBSOCKET_MESSAGE_ERRORS.ACTIVE_ITEM_REQUIRED, 'Only the active item can be finalised');
+      assert.equal(room.items[0].status, 'pending');
+      assert.equal(room.items[0].estimate, null);
+    });
+
+    it('returns false with the exact envelope when removing an active item', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      await handleMessage(ws, room, { type: 'add_item', label: 'Story A' });
+      await handleMessage(ws, room, { type: 'select_item', itemId: room.items[0].id });
+      ws.messages.length = 0;
+
+      const result = await handleMessage(ws, room, { type: 'remove_item', itemId: room.items[0].id });
+
+      assert.equal(result, false);
+      assertError(ws, WEBSOCKET_MESSAGE_ERRORS.PENDING_ITEM_REQUIRED, 'Only pending items can be removed');
+      assert.equal(room.items.length, 1);
+      assert.equal(room.items[0].status, 'active');
+    });
+
+    it('returns true for accepted item and round mutations', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+
+      assert.equal(await handleMessage(ws, room, { type: 'join', name: 'Alice' }), true);
+      assert.equal(await handleMessage(ws, room, { type: 'add_item', label: 'Story A' }), true);
+      assert.equal(await handleMessage(ws, room, { type: 'select_item', itemId: room.items[0].id }), true);
+      assert.equal(await handleMessage(ws, room, { type: 'vote', vote: '5' }), true);
+      assert.equal(await handleMessage(ws, room, { type: 'reveal' }), true);
+      assert.equal(await handleMessage(ws, room, { type: 'reset' }), true);
+      assert.equal(await handleMessage(ws, room, { type: 'finalise_item', itemId: room.items[0].id, estimate: '8' }), true);
+    });
+
+    it('returns true for accepted move and timer mutations', async () => {
+      const bucket = createRoom('bucket', null);
+      const bucketWs = mockWs('p1');
+      assert.equal(await handleMessage(bucketWs, bucket, { type: 'join', name: 'Alice' }), true);
+      assert.equal(await handleMessage(bucketWs, bucket, { type: 'add_item', label: 'Story A' }), true);
+      assert.equal(await handleMessage(bucketWs, bucket, { type: 'move_item', itemId: bucket.items[0].id, position: 'M' }), true);
+
+      const poker = createRoom('planning-poker', null);
+      const pokerWs = mockWs('p2');
+      assert.equal(await handleMessage(pokerWs, poker, { type: 'join', name: 'Bob' }), true);
+      assert.equal(await handleMessage(pokerWs, poker, { type: 'start_timer', seconds: 60 }), true);
+      assert.equal(await handleMessage(pokerWs, poker, { type: 'cancel_timer' }), true);
+    });
+
+    it('accepts the documented timer boundary durations', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+
+      // 5 seconds is the shortest allowed Planning Poker timer.
+      let result = await handleMessage(ws, room, { type: 'start_timer', seconds: 5 });
+      assert.equal(result, true);
+      assert.equal(room.timer.durationSeconds, 5);
+
+      // 300 seconds is the longest allowed Planning Poker timer.
+      result = await handleMessage(ws, room, { type: 'start_timer', seconds: 300 });
+      assert.equal(result, true);
+      assert.equal(room.timer.durationSeconds, 300);
+    });
+
+    it('rejects durations immediately outside the documented timer boundaries', async () => {
+      const room = createRoom('planning-poker', null);
+      const ws = mockWs('p1');
+      await handleMessage(ws, room, { type: 'join', name: 'Alice' });
+      ws.messages.length = 0;
+
+      // 4 is one second below the 5-second minimum.
+      let result = await handleMessage(ws, room, { type: 'start_timer', seconds: 4 });
+      assert.equal(result, false);
+      assertError(ws, WEBSOCKET_MESSAGE_ERRORS.TIMER_DURATION_INVALID, 'Timer duration must be between 5 and 300 seconds');
+      assert.equal(room.timer.endsAt, null);
+
+      ws.messages.length = 0;
+      // 301 is one second above the 300-second maximum.
+      result = await handleMessage(ws, room, { type: 'start_timer', seconds: 301 });
+      assert.equal(result, false);
+      assertError(ws, WEBSOCKET_MESSAGE_ERRORS.TIMER_DURATION_INVALID, 'Timer duration must be between 5 and 300 seconds');
+      assert.equal(room.timer.endsAt, null);
     });
   });
 });
