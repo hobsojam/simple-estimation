@@ -534,5 +534,5 @@ Cancels a Planning Poker timer. This is an admin action.
   `room.pinProtected === false` or the persisted local `participantId` matches
   `room.facilitatorId`.
 - Handle WebSocket close codes separately from in-band `error` messages.
-- Preserve unknown fields in local models where practical. The protocol is not
-  formally versioned yet.
+- Preserve unknown fields in local models where practical. Check
+  `GET /api/config` and reject protocol versions the client does not support.
