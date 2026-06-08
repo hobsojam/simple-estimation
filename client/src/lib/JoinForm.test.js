@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/svelte';
 import JoinForm from './JoinForm.svelte';
 
 describe('JoinForm', () => {
+  beforeEach(() => localStorage.clear());
   describe('join mode (default)', () => {
     it('shows join fields by default', () => {
       const { getByPlaceholderText } = render(JoinForm);
