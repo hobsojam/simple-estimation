@@ -5,7 +5,7 @@
 
   let mode = $state('join');
   let roomId = $state('');
-  let name = $state('');
+  let name = $state(localStorage.getItem('participantName') ?? '');
   let pin = $state('');
   let accessPin = $state('');
   let roomType = $state('planning-poker');
@@ -16,6 +16,7 @@
 
   function handleCreate() {
     if (!name.trim()) return;
+    localStorage.setItem('participantName', name.trim());
     oncreate?.({
       name: name.trim(),
       roomType,
@@ -27,6 +28,7 @@
 
   function handleJoin() {
     if (!name.trim() || !roomId.trim()) return;
+    localStorage.setItem('participantName', name.trim());
     onjoin?.({
       roomId: roomId.trim(),
       name: name.trim(),
