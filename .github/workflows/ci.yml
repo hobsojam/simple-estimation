@@ -122,3 +122,22 @@ jobs:
         with:
           name: e2e-reports
           path: e2e/sonar-e2e.xml
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: server
+      - name: Audit server dependencies
+        run: npm audit --audit-level=high
+        working-directory: server
+      - run: npm install
+        working-directory: client
+      - name: Audit client dependencies
+        run: npm audit --audit-level=high
+        working-directory: client
