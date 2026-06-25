@@ -4,16 +4,22 @@ updates:
     directory: /server
     schedule:
       interval: weekly
+    cooldown:
+      default: 7
     open-pull-requests-limit: 5
 
   - package-ecosystem: npm
     directory: /client
     schedule:
       interval: weekly
+    cooldown:
+      default: 7
     open-pull-requests-limit: 5
 
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default: 7
     open-pull-requests-limit: 2
