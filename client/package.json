@@ -22,7 +22,7 @@
     "esbuild": "^0.28.1",
     "eslint": "^10.8.0",
     "eslint-plugin-svelte": "^3.22.0",
-    "globals": "^17.7.0",
+    "globals": "^17.11.0",
     "jsdom": "^30.0.1",
     "playwright": "^1.61.1",
     "svelte": "^5.56.9",
