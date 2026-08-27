@@ -11,7 +11,7 @@
     "bcryptjs": "^3.0.3",
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.2",
-    "uuid": "^14.0.1",
+    "uuid": "^14.0.2",
     "ws": "^8.21.3"
   },
   "devDependencies": {
