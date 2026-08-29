@@ -7,6 +7,10 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    groups:
+      stryker:
+        patterns:
+          - "@stryker-mutator/*"
 
   - package-ecosystem: npm
     directory: /client
@@ -15,6 +19,10 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    groups:
+      stryker:
+        patterns:
+          - "@stryker-mutator/*"
 
   - package-ecosystem: docker
     directory: /
