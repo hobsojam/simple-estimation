@@ -6,6 +6,8 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       stryker:
@@ -18,6 +20,8 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     groups:
       stryker:
@@ -28,6 +32,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     cooldown:
       default-days: 7
     open-pull-requests-limit: 2
