@@ -145,12 +145,11 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
         working-directory: client
 
-  # Dev tooling advisories are reported but do not fail the run: they never ship
-  # in the production image and sometimes have no upstream fix yet.
+  # Dev tooling advisories are reported as warnings but do not fail the check:
+  # they never ship in the production image and sometimes have no upstream fix yet.
   audit-dev:
     name: Dependency audit (dev, non-blocking)
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -159,12 +158,26 @@ jobs:
       - run: npm ci
         working-directory: server
       - name: Audit all server dependencies
+        id: server
+        continue-on-error: true
         run: npm audit --audit-level=high
         working-directory: server
       - run: npm install
-        if: ${{ !cancelled() }}
         working-directory: client
       - name: Audit all client dependencies
-        if: ${{ !cancelled() }}
+        id: client
+        continue-on-error: true
         run: npm audit --audit-level=high
         working-directory: client
+      - name: Report dev dependency advisories
+        if: steps.server.outcome == 'failure' || steps.client.outcome == 'failure'
+        env:
+          SERVER: ${{ steps.server.outcome }}
+          CLIENT: ${{ steps.client.outcome }}
+        run: |
+          echo "::warning title=Dev dependency advisories::High/critical advisories in dev dependencies (server audit: $SERVER, client audit: $CLIENT). See the audit step logs."
+          {
+            echo "### Dev dependency advisories"
+            echo "- server audit: $SERVER"
+            echo "- client audit: $CLIENT"
+          } >> "$GITHUB_STEP_SUMMARY"
