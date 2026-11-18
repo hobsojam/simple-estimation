@@ -136,11 +136,35 @@ jobs:
           node-version: 22
       - run: npm ci
         working-directory: server
-      - name: Audit server dependencies
-        run: npm audit --audit-level=high
+      - name: Audit server production dependencies
+        run: npm audit --omit=dev --audit-level=high
         working-directory: server
       - run: npm install
         working-directory: client
-      - name: Audit client dependencies
+      - name: Audit client production dependencies
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: client
+
+  # Dev tooling advisories are reported but do not fail the run: they never ship
+  # in the production image and sometimes have no upstream fix yet.
+  audit-dev:
+    name: Dependency audit (dev, non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: server
+      - name: Audit all server dependencies
+        run: npm audit --audit-level=high
+        working-directory: server
+      - run: npm install
+        if: ${{ !cancelled() }}
+        working-directory: client
+      - name: Audit all client dependencies
+        if: ${{ !cancelled() }}
         run: npm audit --audit-level=high
         working-directory: client
